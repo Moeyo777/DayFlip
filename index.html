@@ -1,0 +1,1089 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- 보안 설정: 이 파일, Pretendard 폰트(cdn.jsdelivr.net), 사이트 아이콘(icons.duckduckgo.com),
+     구글 검색만 허용합니다.
+     무언가 추가했는데 오류 없이 안 되면 이 줄 때문이에요. 이렇게 주소를 넣으세요.
+     - 이미지:         img-src 뒤에 이미지 주소 추가 (글 속 이미지면 data: 도)
+     - 다른 폰트:      CSS 주소는 style-src 에, 폰트 파일 주소는 font-src 에 추가
+                       (구글 폰트: https://fonts.googleapis.com / https://fonts.gstatic.com)
+     - 네이버 검색:    form-action 에 https://search.naver.com 추가, 그리고 아래 <form> 의
+                       action 을 https://search.naver.com/search.naver 로, name="q" 를 name="query" 로 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net; img-src https://icons.duckduckgo.com; form-action https://www.google.com; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>데이플립</title>
+<!-- 폰트: Pretendard (애플 기본 서체 'SF Pro + 애플 SD 산돌고딕 Neo'와 닮은 무료 폰트) -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<style>
+  /* 색깔: 애플 색을 기준으로 맞춤. 여기 값을 바꾸면 전체 색이 바뀝니다 */
+  :root {
+    --wall: #e8e8ed;      /* 벽 (애플 회색. 흰 종이가 또렷이 보이도록 한 단계 진하게) */
+    --wall-ink: #636366;  /* 벽 위 글씨 */
+    --paper: #ffffff;     /* 종이 */
+    --ink: #1d1d1f;       /* 글씨 (애플 검정) */
+    --ink-soft: #6e6e73;  /* 작은 글씨 */
+    --sun: #e30000;       /* 일요일, 공휴일 (애플 캘린더 빨강, 글씨로 읽히게 조금 진하게) */
+    --sat: #0066cc;       /* 토요일 (애플 링크 파랑) */
+    --binding: #1d1d1f;   /* 일력 위 검은 띠 */
+    --pad-1: #dcdce1;     /* 일력 밑에 남은 종이 (가까운 장) */
+    --pad-2: #d2d2d7;     /* 일력 밑에 남은 종이 (먼 장) */
+    --chip: #dcdce1;      /* 단축키 표시·첫 글자 아이콘 바탕 */
+    --chip-ink: #56565b;  /* 그 위 글씨 */
+    --icon-plate: #dcdce1; /* 사이트 아이콘 받침 */
+    --error: #c00000;     /* 벽 위 오류 글씨 (작은 글씨도 읽히게 진한 빨강) */
+    --button: #0071e3;    /* 검색 버튼 (애플 파란 버튼) */
+    --button-hover: #0060c0;
+    --button-ink: #ffffff;
+    --focus: #0071e3;     /* 키보드 포커스 테두리 */
+    --wall-action: #0060c0; /* 벽 위 파란 글자 버튼 (회색 벽에서도 읽히게 조금 진하게) */
+    --select: #b3d7ff;    /* 글자 선택 배경 */
+    --radius: 18px;       /* 종이 모서리 (애플 카드처럼 둥글게) */
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wall: #000000;
+      --wall-ink: #98989d;
+      --paper: #1c1c1e;
+      --ink: #f5f5f7;
+      --ink-soft: #98989d;
+      --sun: #ff453a;
+      --sat: #2997ff;
+      --binding: #3a3a3c;
+      --pad-1: #2c2c2e;
+      --pad-2: #232325;
+      --chip: #2c2c2e;
+      --chip-ink: #aeaeb2;
+      --icon-plate: #d1d1d6; /* 다크 모드에선 밝은 받침이라야 검은 아이콘이 보임 */
+      --error: #ff6961;
+      --button: #0071e3;
+      --button-hover: #0060c0;
+      --button-ink: #ffffff;
+      --focus: #2997ff;
+      --wall-action: #2997ff;
+      --select: #3f638b;
+      color-scheme: dark;
+    }
+    :root .num { font-weight: 350; } /* 어두운 바탕의 밝은 글씨는 한 단계 굵게 */
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+  html { background: var(--wall); }
+  body {
+    min-height: 100svh;
+    background: var(--wall);
+    color: var(--ink);
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    letter-spacing: -.01em;
+    -webkit-font-smoothing: antialiased;
+    caret-color: var(--focus);
+  }
+  ::selection { background: var(--select); color: var(--ink); }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 9fr) minmax(0, 10fr);
+    gap: clamp(32px, 6vw, 96px);
+    max-width: 1500px;
+    min-height: 100svh;
+    margin: 0 auto;
+    padding: clamp(28px, 6vh, 64px) clamp(24px, 5vw, 80px) clamp(56px, 8vh, 80px);
+    align-items: start;
+  }
+
+  /* 종이: 벽보다 한 톤 밝은 면 + 둥근 모서리. 그림자·테두리 없이 색 차이로만 구분 */
+  .paper {
+    position: relative;
+    background: var(--paper);
+    border-radius: var(--radius);
+  }
+
+  /* ---- 일력 ---- */
+  .calendar { position: sticky; top: clamp(28px, 6vh, 64px); isolation: isolate; }
+  /* 일력 밑에 남은 종이 두 장: 조금씩 좁고 아래로 비어져 나옴 */
+  .calendar::before, .calendar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    z-index: -1;
+  }
+  .calendar::before { left: 8px; right: 8px; bottom: -6px; background: var(--pad-1); }
+  .calendar::after { left: 18px; right: 18px; bottom: -12px; background: var(--pad-2); z-index: -2; }
+  .sheet {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100svh - clamp(28px, 6vh, 64px) - clamp(56px, 8vh, 80px));
+    border-top: 14px solid var(--binding); /* 일력 위 검은 띠 */
+    padding: clamp(20px, 3vh, 36px) clamp(24px, 3vw, 48px) clamp(18px, 3vh, 32px);
+    font-variant-numeric: tabular-nums;
+  }
+  .sheet.torn {
+    position: absolute;
+    /* 띠는 벽에 남고 종이만 떨어집니다 */
+    inset: 0 0 auto 0;
+    border-top-color: transparent;
+    background-clip: padding-box;
+    transform-origin: 8% 0;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px 16px;
+    font-size: clamp(17px, 1.5vw, 22px);
+    font-weight: 600;
+  }
+  .lunar { font-size: .8em; font-weight: 500; color: var(--ink-soft); }
+  .day {
+    flex: 1;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    padding: 2vh 0;
+  }
+  .num {
+    /* 애플 캘린더 아이콘처럼 가늘고 큰 숫자 */
+    font-weight: 300;
+    font-size: clamp(9rem, min(42vh, 24vw), 28rem);
+    line-height: .86;
+    letter-spacing: -.04em;
+  }
+  .dow {
+    margin-top: 1.5vh;
+    font-size: clamp(26px, 3.4vw, 46px);
+    font-weight: 600;
+    letter-spacing: -.02em;
+  }
+  .holiday {
+    margin-top: 6px;
+    font-size: clamp(15px, 1.4vw, 19px);
+    font-weight: 600;
+    color: var(--sun);
+  }
+  .holiday:empty { display: none; }
+  .is-sun .num, .is-sun .dow { color: var(--sun); }
+  .is-sat .num, .is-sat .dow { color: var(--sat); }
+  .foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-top: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+  .clock {
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    color: var(--ink);
+  }
+
+  /* ---- 오른쪽: 검색과 링크는 위에 붙이고, 메모는 아래로 내려 일력 아랫선에 맞춤 ---- */
+  .tools {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(20px, 3vh, 40px);
+    min-height: calc(100svh - clamp(28px, 6vh, 64px) - clamp(56px, 8vh, 80px));
+  }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  h2 {
+    margin-bottom: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--wall-ink);
+  }
+  kbd {
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 6px;
+    background: var(--chip);
+    color: var(--chip-ink);
+    font: inherit;
+    font-size: 13px;
+  }
+  .search { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 999px; }
+  .search input {
+    flex: 1;
+    min-width: 0;
+    height: 48px;
+    padding: 0 8px 0 16px;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .search input::-webkit-search-cancel-button { display: none; }
+  .search input::placeholder { color: var(--ink-soft); }
+  .search input:focus-visible { outline: none; }
+  .search:focus-within { outline: 3px solid var(--focus); outline-offset: 4px; }
+  .search button, .pill-button {
+    width: 104px;
+    height: 48px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--button);
+    color: var(--button-ink);
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color .15s ease-out;
+  }
+  .search button:hover, .pill-button:hover { background: var(--button-hover); }
+
+  /* 단축키 안내: 키보드를 쓰기 시작한 뒤, 빈 검색창에 있을 때만 보임 (자리는 미리 비워 둬서 아래를 밀지 않음) */
+  .tools > section:first-child { position: relative; padding-bottom: 20px; }
+  .key-hint {
+    position: absolute;
+    top: calc(100% - 20px);
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--wall-ink);
+    opacity: 0;
+    transition: opacity .2s ease-out;
+  }
+  .used-keyboard .search:focus-within:has(input:placeholder-shown) + .key-hint { opacity: 1; }
+  .key-hint kbd:first-child { margin-left: 0; }
+  @media (hover: none) {
+    .key-hint, h2 kbd, a.link-card::before { display: none; } /* 키보드 없는 화면에선 단축키 표시를 숨김 */
+    .tools > section:first-child { padding-bottom: 0; }
+  }
+
+  /* 제목 줄: 왼쪽 제목, 오른쪽 작은 글자 버튼 */
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .section-head h2 { margin-bottom: 0; }
+  .text-button {
+    padding: 4px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--focus);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .text-button:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .text-button.is-danger { color: var(--sun); }
+  .section-head .text-button, .links-status .text-button { color: var(--wall-action); }
+  .head-actions { display: flex; gap: 4px; }
+
+  .links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    list-style: none;
+    padding: 0;
+    counter-reset: link;
+  }
+  /* 링크 카드: 위에 사이트 아이콘, 아래에 이름과 주소 */
+  .link-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 116px;
+    padding: 16px 20px;
+    border: 0;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .2s cubic-bezier(.2, .8, .2, 1);
+  }
+  .favicon, .monogram { flex: none; width: 28px; height: 28px; border-radius: 6px; }
+  .favicon { padding: 4px; background: var(--icon-plate); } /* 흰색·검은색 아이콘도 보이게 받침 */
+  .monogram {
+    display: grid;
+    place-items: center;
+    background: var(--chip);
+    color: var(--chip-ink);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .link-card .label { display: flex; flex-direction: column; min-width: 0; }
+  .link-card .name, .link-card .url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .link-card.is-add { justify-content: center; align-items: center; color: var(--focus); font-size: 17px; font-weight: 600; }
+  /* 사이트가 5개 이상이면 넓은 화면에서 3줄로, 카드는 낮게 (메모가 화면 밖으로 밀리지 않게) */
+  .links.is-many .link-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 64px;
+    gap: 10px;
+    padding: 12px 40px 12px 14px; /* 오른쪽은 숫자 칩 자리 */
+  }
+  .links.is-many .link-card::before { top: 50%; transform: translateY(-50%); right: 14px; }
+  .links.is-many .link-card.is-add { justify-content: center; padding: 12px 16px; }
+  .links.is-many .name { font-size: 17px; }
+  .links.is-many .url { display: none; }
+  .links.is-many button.link-card:not(.is-add) { padding-right: 60px; } /* '고치기' 글자 자리 */
+  @media (min-width: 1200px) {
+    .links.is-many { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 520px) {
+    .links.is-many { grid-template-columns: minmax(0, 1fr); } /* 좁은 휴대폰은 한 줄에 하나씩 */
+  }
+  @media (hover: none) {
+    .links.is-many a.link-card { padding-right: 14px; } /* 숫자 칩이 숨겨지니 그 자리도 비우지 않음 */
+  }
+  .link-card.is-editing { outline: 3px dashed var(--focus); outline-offset: 3px; } /* 점선 = 지금 고치는 카드 (실선 = 포커스) */
+  .links.is-adding .is-add { display: none; }
+  .links-empty { grid-column: 1 / -1; padding: 8px 0; font-size: 15px; color: var(--wall-ink); }
+  /* 오른쪽 위 작은 숫자 = 그 숫자 키를 누르면 바로 열림 (화면 읽기 프로그램은 읽지 않음) */
+  a.link-card::before, button.link-card:not(.is-add)::before {
+    counter-increment: link;
+    content: counter(link);      /* 오래된 브라우저용 */
+    content: counter(link) / "";
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+  a.link-card::before { padding: 1px 7px; border-radius: 6px; background: var(--chip); color: var(--chip-ink); }
+  button.link-card:not(.is-add)::before { content: "고치기"; content: "고치기" / ""; color: var(--focus); }
+  .link-card:hover, .link-card:focus-visible { transform: translateY(-3px); }
+
+  /* 삭제·기본 목록 뒤 '되돌리기' 줄 */
+  .links-status { display: flex; align-items: baseline; gap: 4px; font-size: 15px; color: var(--wall-ink); }
+  .links-status.is-shown { margin-top: 12px; }
+
+  /* 사이트 추가·고치기 칸 */
+  .link-form { display: grid; gap: 14px; margin-top: 18px; padding: 20px 22px; }
+  .link-form[hidden] { display: none; }
+  .link-form h3 { font-size: 17px; font-weight: 600; }
+  .link-form label { display: grid; gap: 6px; font-size: 15px; font-weight: 600; color: var(--ink-soft); }
+  .link-form input {
+    height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--wall);
+    color: var(--ink);
+    font: inherit;
+    font-size: 17px;
+    font-weight: 400;
+  }
+  .link-form input::placeholder { color: var(--ink-soft); font-style: normal; }
+  .form-error { font-size: 13px; font-weight: 600; color: var(--sun); }
+  .form-error:empty { display: none; }
+  .form-actions { display: flex; align-items: center; gap: 12px; }
+  .form-actions .pill-button { height: 44px; }
+  .form-actions [data-action="delete"] { margin-left: auto; }
+  .links .name { font-size: 21px; font-weight: 600; letter-spacing: -.02em; }
+  .links .url { margin-top: 4px; font-size: 13px; color: var(--ink-soft); }
+
+  .memo textarea {
+    display: block;
+    width: 100%;
+    padding: 18px 64px 18px 22px; /* 오른쪽은 글자 수 표시 자리 */
+    border: 0;
+    border-radius: var(--radius);
+    resize: none;
+    background: transparent;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 19px;
+    line-height: 1.7;
+  }
+  .memo textarea::placeholder { color: var(--ink-soft); }
+  .memo textarea:focus-visible { outline: none; }
+  .memo:focus-within { outline: 3px solid var(--focus); outline-offset: 4px; }
+  .tools > section:last-child { position: relative; margin-top: auto; }
+  /* 메모 안내는 늘 보임 (자정에 지워진다는 걸 미리 알 수 있게) */
+  .hint {
+    position: absolute; /* 메모 종이 아랫선이 일력 아랫선과 맞도록 아래에 매달기 */
+    top: 100%;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--wall-ink);
+  }
+  .hint.is-error { color: var(--error); font-weight: 600; }
+  .memo-count {
+    position: absolute;
+    right: 20px;
+    bottom: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .memo-count.is-full { color: var(--sun); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .link-card, .key-hint { transition: none; }
+    .link-card:hover, .link-card:focus-visible { transform: none; }
+  }
+
+  /* 창이 좁으면 위아래로 쌓기 */
+  @media (max-width: 860px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .calendar { position: relative; top: 0; }
+    .sheet, .tools { min-height: 0; }
+    .tools { gap: 40px; }
+    .num { font-size: clamp(8rem, 42vw, 14rem); }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1 class="visually-hidden">데이플립 (DayFlip)</h1>
+  <section class="calendar" aria-label="오늘 날짜">
+    <div class="sheet paper" id="sheet">
+      <div class="top">
+        <span class="ym"></span>
+        <span class="lunar"></span>
+      </div>
+      <div class="day">
+        <div class="num"></div>
+        <div class="dow"></div>
+        <div class="holiday"></div>
+      </div>
+      <div class="foot">
+        <span class="doy"></span>
+        <time class="clock"></time>
+      </div>
+    </div>
+  </section>
+
+  <div class="tools">
+    <section>
+      <h2 id="search-label">검색<span class="visually-hidden"> (결과는 새 탭에서 열림)</span><kbd aria-hidden="true">/</kbd></h2>
+      <!-- target="_blank" = 결과를 새 탭에서 열기 (이 시작 페이지는 그대로 남음) -->
+      <form class="search paper" action="https://www.google.com/search" method="get" target="_blank" rel="noopener noreferrer" role="search">
+        <input name="q" type="search" placeholder="구글에서 검색" aria-labelledby="search-label" aria-keyshortcuts="/" autocomplete="off" required>
+        <button type="submit">검색</button>
+      </form>
+      <p class="key-hint" aria-hidden="true"><kbd>Esc</kbd> 로 검색창에서 나가면 <kbd>1</kbd>~<kbd>9</kbd> 로 자주 가는 곳이 바로 열려요</p>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2 id="links-label">자주 가는 곳<span class="visually-hidden" id="links-note"> (모두 새 탭에서 열림)</span></h2>
+        <div class="head-actions">
+          <button type="button" class="text-button" id="links-reset" hidden>기본 목록으로</button>
+          <button type="button" class="text-button" id="links-edit">편집</button>
+        </div>
+      </div>
+      <!-- 링크 목록은 아래 <script>의 DEFAULT_LINKS 에 있어요.
+           주의: 페이지의 '편집'으로 한 번이라도 고치면 이 브라우저에서는 그 목록이 먼저예요.
+           파일의 목록을 다시 보려면 페이지에서 '편집' → '기본 목록으로'를 누르세요. (메모는 그대로) -->
+      <ul class="links" aria-labelledby="links-label"></ul>
+      <p class="links-status" id="links-status" role="status"><span></span><button type="button" class="text-button" hidden>되돌리기</button></p>
+      <form class="link-form paper" id="link-form" hidden novalidate>
+        <h3 id="link-form-title">사이트 추가</h3>
+        <label>이름 (선택) <input name="name" maxlength="20" autocomplete="off" placeholder="예: 네이버"></label>
+        <label>주소 <input name="url" inputmode="url" autocomplete="off" maxlength="2048" placeholder="예: naver.com" aria-describedby="link-form-error"></label>
+        <p class="form-error" id="link-form-error" role="alert"></p>
+        <div class="form-actions">
+          <button type="submit" class="pill-button">저장</button>
+          <button type="button" class="text-button" data-action="cancel">취소</button>
+          <button type="button" class="text-button is-danger" data-action="delete">삭제</button>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <h2><label for="memo">오늘의 메모</label></h2>
+      <div class="memo paper">
+        <textarea id="memo" rows="2" maxlength="60" placeholder="오늘 할 일 한두 줄" aria-describedby="memo-hint"></textarea>
+        <span class="memo-count" id="memo-count" aria-hidden="true"></span>
+      </div>
+      <p class="hint" id="memo-hint" role="status">자정에 일력과 함께 지워져요 · 이 브라우저에만 저장 · 비밀번호는 적지 마세요</p>
+    </section>
+  </div>
+</main>
+
+<script>
+  const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+
+  // 공휴일 (양력) — '월-일': '이름'. 새 공휴일이 생기면 여기에 한 줄 추가하세요.
+  // 대체공휴일·임시공휴일·선거일은 날짜가 해마다 달라서 직접 추가해야 해요.
+  const SOLAR_HOLIDAYS = {
+    '1-1': '신정',
+    '3-1': '삼일절',
+    '5-5': '어린이날',
+    '6-6': '현충일',
+    '8-15': '광복절',
+    '10-3': '개천절',
+    '10-9': '한글날',
+    '12-25': '성탄절'
+  };
+  // 공휴일 (음력) — 음력으로 계산하니 해마다 고칠 필요 없어요. 설·추석은 앞뒤 하루도 연휴.
+  const LUNAR_HOLIDAYS = { '1-1': '설날', '4-8': '부처님오신날', '8-15': '추석' };
+  const THREE_DAY_HOLIDAYS = ['1-1', '8-15'];
+  // 해마다 날짜가 다른 휴일 — '연-월-일': '이름'. 새해가 되면 그해 대체공휴일·선거일을 여기에 추가하세요.
+  // ('03-02'처럼 앞에 0을 붙여 써도 괜찮아요)
+  const EXTRA_HOLIDAYS = {
+    '2026-3-2': '대체공휴일',
+    '2026-5-25': '대체공휴일',
+    '2026-6-3': '지방선거',
+    '2026-8-17': '대체공휴일',
+    '2026-10-5': '대체공휴일',
+    '2027-2-9': '대체공휴일',
+    '2027-8-16': '대체공휴일',
+    '2027-10-4': '대체공휴일',
+    '2027-10-11': '대체공휴일',
+    '2027-12-27': '대체공휴일'
+  };
+
+  // '03-01' 처럼 0을 붙여 쓴 날짜도 '3-1' 로 맞춰서 찾음
+  function unpadKeys(table) {
+    return Object.fromEntries(Object.entries(table).map(([key, name]) => [key.split('-').map(Number).join('-'), name]));
+  }
+  const SOLAR_BY_DAY = unpadKeys(SOLAR_HOLIDAYS);
+  const EXTRA_BY_DAY = unpadKeys(EXTRA_HOLIDAYS);
+
+  const sheet = document.getElementById('sheet');
+  const search = document.querySelector('.search input');
+  const memo = document.getElementById('memo');
+  const hint = document.getElementById('memo-hint');
+  // dangi = 한국 음력 (chinese는 중국 시간 기준이라 하루씩 틀릴 때가 있음)
+  const lunarFormat = new Intl.DateTimeFormat('ko-KR-u-ca-dangi', { month: 'numeric', day: 'numeric' });
+  let shownDay = '';
+
+  function lunarParts(date) {
+    const parts = lunarFormat.formatToParts(date);
+    return {
+      month: parts.find(p => p.type === 'month')?.value,
+      day: parts.find(p => p.type === 'day')?.value
+    };
+  }
+
+  function lunarText(date) {
+    const { month, day } = lunarParts(date);
+    return month && day ? `음력 ${month}월 ${day}일` : '';
+  }
+
+  // 윤달('윤4' 같은 것)은 공휴일 계산에서 빼기 위해 숫자만 있는 달만 돌려줌
+  function lunarKey(date) {
+    const { month, day } = lunarParts(date);
+    return /^\d+$/.test(month || '') ? `${month}-${day}` : '';
+  }
+
+  function holidayName(date) {
+    const solar = SOLAR_BY_DAY[`${date.getMonth() + 1}-${date.getDate()}`];
+    if (solar) return solar;
+    const extra = EXTRA_BY_DAY[`${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`];
+    if (extra) return extra;
+    const lunar = LUNAR_HOLIDAYS[lunarKey(date)];
+    if (lunar) return lunar;
+    for (const shift of [-1, 1]) {
+      const near = new Date(date.getFullYear(), date.getMonth(), date.getDate() + shift);
+      const key = lunarKey(near);
+      if (THREE_DAY_HOLIDAYS.includes(key)) return `${LUNAR_HOLIDAYS[key]} 연휴`;
+    }
+    return '';
+  }
+
+  function dayOfYear(date) {
+    const start = Date.UTC(date.getFullYear(), 0, 1);
+    const today = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+    return (today - start) / 86400000 + 1;
+  }
+
+  function fillSheet(el, date) {
+    const week = date.getDay();
+    const holiday = holidayName(date);
+    el.classList.toggle('is-sun', week === 0 || holiday !== '');
+    el.classList.toggle('is-sat', week === 6 && holiday === '');
+    el.querySelector('.ym').textContent = `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+    el.querySelector('.lunar').textContent = lunarText(date);
+    el.querySelector('.num').textContent = date.getDate();
+    el.querySelector('.dow').textContent = WEEKDAYS[week];
+    el.querySelector('.holiday').textContent = holiday;
+    el.querySelector('.doy').textContent = `올해 ${dayOfYear(date)}번째 날`;
+    if (el === sheet) document.title = `${date.getMonth() + 1}월 ${date.getDate()}일 ${WEEKDAYS[week]} · 데이플립`;
+  }
+
+  // 날짜가 바뀌면 어제 종이를 찢어 떨어뜨립니다 (fromDate를 주면 그날 종이를 찢음)
+  function tearOff(fromDate) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const torn = sheet.cloneNode(true);
+    torn.removeAttribute('id');
+    if (fromDate) fillSheet(torn, fromDate);
+    torn.classList.add('torn');
+    torn.setAttribute('aria-hidden', 'true');
+    sheet.after(torn);
+    torn.animate([
+      { transform: 'none', opacity: 1 },
+      { transform: 'translateY(2%) rotate(-4deg)', opacity: 1, offset: .25 },
+      { transform: 'translate(-6%, 70vh) rotate(-18deg)', opacity: 0 }
+    ], { duration: 1100, easing: 'cubic-bezier(.5, 0, .75, .4)' }).onfinish = () => torn.remove();
+  }
+
+  // ---- 오늘의 메모: 이 브라우저(localStorage)에만 저장, 날짜가 바뀌면 지워짐 ----
+  const MEMO_KEY = 'start-page-memo';
+
+  function showHintError(message) {
+    hint.textContent = message;
+    hint.classList.add('is-error');
+  }
+
+  function loadMemo(day) {
+    const raw = localStorage.getItem(MEMO_KEY);
+    if (!raw) return '';
+    try {
+      const saved = JSON.parse(raw);
+      if (saved && typeof saved === 'object') {
+        if (saved.day === day) return String(saved.text || '');
+        localStorage.removeItem(MEMO_KEY); // 지난 날의 메모는 정말로 지움
+        return '';
+      }
+    } catch {
+      // 예전 형식(글자만 저장)은 오늘 메모로 그대로 살림
+    }
+    return raw;
+  }
+
+  function saveMemo() {
+    try {
+      localStorage.setItem(MEMO_KEY, JSON.stringify({ day: shownDay, text: memo.value }));
+    } catch {
+      showHintError('메모를 저장하지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.');
+    }
+  }
+
+  const memoCount = document.getElementById('memo-count');
+  let clearMemoOnBlur = false;
+
+  // 50자를 넘으면 남은 글자 수를 보여 줌
+  function updateMemoCount() {
+    const length = memo.value.length;
+    memoCount.textContent = length > 50 ? `${length}/${memo.maxLength}` : '';
+    memoCount.classList.toggle('is-full', length >= memo.maxLength);
+  }
+
+  memo.addEventListener('input', () => {
+    saveMemo();
+    updateMemoCount();
+  });
+  // 자정에 메모를 쓰고 있었다면, 다 쓰고 빠져나올 때 정리함
+  memo.addEventListener('blur', () => {
+    if (!clearMemoOnBlur) return;
+    clearMemoOnBlur = false;
+    memo.value = '';
+    try { localStorage.removeItem(MEMO_KEY); } catch {}
+    updateMemoCount();
+  });
+  // 다른 탭에서 메모를 고치면 이 탭에도 반영 (서로 덮어쓰지 않게)
+  addEventListener('storage', (event) => {
+    if (event.key !== MEMO_KEY && event.key !== null) return;
+    try { memo.value = loadMemo(shownDay); } catch {}
+    updateMemoCount();
+  });
+
+  const LAST_DAY_KEY = 'start-page-last-day';
+  function rememberDay() {
+    try { localStorage.setItem(LAST_DAY_KEY, shownDay); } catch {}
+  }
+
+  function tick() {
+    const now = new Date();
+    const key = now.toDateString();
+    if (key !== shownDay) {
+      if (shownDay) tearOff();
+      fillSheet(sheet, now);
+      shownDay = key;
+      rememberDay();
+      if (document.activeElement === memo && document.hasFocus()) {
+        clearMemoOnBlur = true; // 쓰는 중에는 지우지 않음
+      } else {
+        try {
+          memo.value = loadMemo(key);
+        } catch {
+          memo.value = '';
+          showHintError('이 브라우저에서는 메모를 저장할 수 없어요.');
+        }
+        updateMemoCount();
+      }
+    }
+    const clock = sheet.querySelector('.clock');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    clock.textContent = `${hh}:${mm}`;
+    clock.dateTime = `${hh}:${mm}`;
+  }
+
+  // 그날 처음 열면 지난번 종이를 한 장 찢어 보여 줌 (자정에 탭이 열려 있지 않아도 매일 보이게)
+  let lastSeenDay = null;
+  try { lastSeenDay = localStorage.getItem(LAST_DAY_KEY); } catch {}
+  tick();
+  if (lastSeenDay && lastSeenDay !== shownDay && /^\w{3} \w{3} \d{2} \d{4}$/.test(lastSeenDay)) {
+    setTimeout(() => tearOff(new Date(lastSeenDay)), 500);
+  }
+  setInterval(tick, 1000);
+  document.addEventListener('visibilitychange', tick); // 밤새 열어 둔 탭으로 돌아오면 바로 날짜부터 맞춤
+
+  // 검색 결과가 새 탭에서 열리면, 이 탭의 검색창은 비워서 다음 검색을 준비
+  search.form.addEventListener('submit', () => setTimeout(() => search.form.reset()));
+
+  // ---- 자주 가는 곳 ----
+  // 기본 목록: 처음 열었을 때 보이는 사이트. 페이지의 '편집'으로 고치면 이 브라우저에 따로 저장되고,
+  // 그때부터는 저장된 목록이 먼저예요. (숫자 키 1~9 때문에 9개까지)
+  // 페이지에서 고친 뒤 이 기본 목록으로 돌아가려면: 페이지의 '편집' → '기본 목록으로' (메모는 그대로 남아요)
+  const DEFAULT_LINKS = [
+    { name: '구글', url: 'https://www.google.com' },
+    { name: '지메일', url: 'https://mail.google.com' },
+    { name: '유튜브', url: 'https://www.youtube.com' },
+    { name: '유튜브 뮤직', url: 'https://music.youtube.com' }
+  ];
+  const LINKS_KEY = 'start-page-links';
+  const MAX_LINKS = 9;
+  // 위 목록도 저장된 목록과 똑같이 검사함: 'naver.com'처럼 써도 되고, 잘못 쓴 줄은 건너뛰고, 9개까지만 씀
+  const DEFAULTS = DEFAULT_LINKS.slice(0, MAX_LINKS).map(cleanLink).filter(Boolean);
+  const linksList = document.querySelector('.links');
+  const editButton = document.getElementById('links-edit');
+  const resetButton = document.getElementById('links-reset');
+  const linkForm = document.getElementById('link-form');
+  const formError = linkForm.querySelector('.form-error');
+  let links = loadLinks();
+  let editing = false;
+  let editingIndex = -1; // -1 = 새로 추가
+
+  // 'naver.com' 처럼 써도 https:// 를 붙여 줌. http/https 주소만 받음 (javascript: 같은 건 거부)
+  function normalizeUrl(text) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed || trimmed.length > 2048) return null;
+    const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    try {
+      const url = new URL(withScheme);
+      if (!['http:', 'https:'].includes(url.protocol) || !url.hostname.includes('.')) return null;
+      url.username = '';
+      url.password = ''; // 주소 안의 아이디·비밀번호는 저장하지 않음
+      return url.href;
+    } catch {
+      return null;
+    }
+  }
+
+  // 이름: 글자 방향을 뒤집는 특수문자·제어문자를 빼고 20자까지 (이모지가 반으로 잘리지 않게 글자 단위로 자름)
+  function cleanName(text) {
+    return Array.from(String(text || '').replace(/[\u0000-\u001F\u202A-\u202E\u2066-\u2069]/g, '').trim()).slice(0, 20).join('');
+  }
+
+  function cleanLink(item) {
+    if (!item || typeof item !== 'object') return null;
+    const url = normalizeUrl(item.url);
+    return url ? { name: cleanName(item.name) || shortHost(url), url } : null;
+  }
+
+  function loadLinks() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LINKS_KEY));
+      if (Array.isArray(saved)) return saved.slice(0, MAX_LINKS).map(cleanLink).filter(Boolean);
+    } catch {
+      // 저장된 목록이 없거나 깨졌으면 기본 목록 사용
+    }
+    return DEFAULTS;
+  }
+
+  function saveLinks(next) {
+    try {
+      localStorage.setItem(LINKS_KEY, JSON.stringify(next));
+    } catch {
+      showFormError('저장하지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.');
+      return false;
+    }
+    links = next;
+    return true;
+  }
+
+  function shortHost(url) {
+    return new URL(url).hostname.replace(/^www\./, '');
+  }
+
+  function monogram(link) {
+    const letter = document.createElement('span');
+    letter.className = 'monogram';
+    letter.setAttribute('aria-hidden', 'true');
+    letter.textContent = Array.from(link.name)[0] || '';
+    return letter;
+  }
+
+  // 사이트 아이콘: DuckDuckGo 아이콘 서비스에서 가져오고(사이트 주소의 도메인만 전달됨), 못 가져오면 이름 첫 글자로 대신함.
+  // 알려진 한계: DuckDuckGo가 아이콘을 모르는 사이트에는 회색 '›' 그림을 보내 줘요. 진짜 아이콘과 크기가 같아서
+  // 이 페이지에서는 구별할 수 없어요(보안상 다른 사이트 그림의 내용은 읽을 수 없음).
+  // 집·회사 안의 주소(192.168…, .local 등)는 밖으로 알리지 않도록 처음부터 첫 글자로 표시
+  const PRIVATE_HOST = /^[\d.]+$|\.(local|lan|internal|home\.arpa|corp)$/i;
+  function siteIcon(link) {
+    const hostname = new URL(link.url).hostname;
+    if (PRIVATE_HOST.test(hostname)) return monogram(link);
+    const icon = document.createElement('img');
+    icon.className = 'favicon';
+    icon.alt = '';
+    icon.width = 28;
+    icon.height = 28;
+    icon.referrerPolicy = 'no-referrer';
+    icon.src = `https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostname)}.ico`;
+    icon.addEventListener('error', () => icon.replaceWith(monogram(link)), { once: true });
+    return icon;
+  }
+
+  function linkCard(link, index) {
+    const card = document.createElement(editing ? 'button' : 'a');
+    card.className = 'paper link-card';
+    card.title = link.name; // 이름이 잘려 보일 때 마우스를 올리면 전체 이름
+    if (editing) {
+      card.type = 'button';
+      card.setAttribute('aria-label', `${link.name} 고치기`);
+      card.addEventListener('click', () => openForm(index));
+    } else {
+      card.href = link.url;
+      card.target = '_blank';
+      card.rel = 'noopener noreferrer';
+      card.setAttribute('aria-keyshortcuts', String(index + 1));
+    }
+    const label = document.createElement('span');
+    label.className = 'label';
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = link.name;
+    const host = document.createElement('span');
+    host.className = 'url';
+    host.setAttribute('aria-hidden', 'true');
+    host.textContent = shortHost(link.url);
+    label.append(name, host);
+    card.append(siteIcon(link), label);
+    return card;
+  }
+
+  function renderLinks() {
+    const items = links.map((link, index) => {
+      const li = document.createElement('li');
+      li.append(linkCard(link, index));
+      return li;
+    });
+    if (editing && links.length < MAX_LINKS) {
+      const li = document.createElement('li');
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'paper link-card is-add';
+      add.textContent = '사이트 추가';
+      add.addEventListener('click', () => openForm(-1));
+      li.append(add);
+      items.push(li);
+    }
+    if (!items.length) {
+      const empty = document.createElement('li');
+      empty.className = 'links-empty';
+      empty.textContent = '편집을 눌러 자주 가는 사이트를 추가해 보세요.';
+      items.push(empty);
+    }
+    linksList.replaceChildren(...items);
+    linksList.classList.toggle('is-many', links.length > 4);
+    resetButton.hidden = !editing || !hasSavedLinks(); // 되돌릴 게 있을 때만 보임
+    linksList.classList.remove('is-adding');
+  }
+
+  // ---- 되돌리기: 삭제나 '기본 목록으로' 직후 잠깐 보임 ----
+  const linksStatus = document.getElementById('links-status');
+  const undoButton = linksStatus.querySelector('button');
+  let undoLinks = null;
+  let undoTimer = 0;
+
+  // 상태 줄은 늘 페이지에 있어서(비어 있을 뿐) 화면 읽기 프로그램이 새 글을 읽어 줌
+  function showStatus(message, withUndo = false) {
+    linksStatus.querySelector('span').textContent = message;
+    undoButton.hidden = !withUndo;
+    linksStatus.classList.add('is-shown');
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(hideUndo, 20000);
+  }
+
+  function offerUndo(message, previous) {
+    undoLinks = previous;
+    showStatus(message, true);
+  }
+
+  function hideUndo() {
+    if (linksStatus.contains(document.activeElement)) editButton.focus();
+    linksStatus.querySelector('span').textContent = '';
+    undoButton.hidden = true;
+    linksStatus.classList.remove('is-shown');
+    undoLinks = null;
+  }
+
+  undoButton.addEventListener('click', () => {
+    if (!undoLinks) return;
+    let restored;
+    if (undoLinks === DEFAULTS) {
+      // 되돌릴 목록이 기본 목록이면 저장하지 않고 지움 (파일의 기본 목록을 계속 따르게)
+      try { localStorage.removeItem(LINKS_KEY); restored = true; } catch { restored = false; }
+      if (restored) links = DEFAULTS;
+    } else {
+      restored = saveLinks(undoLinks);
+    }
+    if (!restored) {
+      showStatus('되돌리지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.');
+      return;
+    }
+    closeForm();
+    hideUndo();
+    renderLinks();
+    editButton.focus();
+  });
+
+  function openForm(index) {
+    editingIndex = index;
+    const link = links[index] || { name: '', url: '' };
+    linkForm.querySelector('#link-form-title').textContent = index < 0 ? '사이트 추가' : '사이트 고치기';
+    linkForm.elements.name.value = link.name;
+    linkForm.elements.url.value = link.url;
+    linkForm.querySelector('[data-action="delete"]').hidden = index < 0;
+    showFormError('');
+    linkForm.hidden = false;
+    // 고치는 카드 표시, 추가할 때는 '사이트 추가' 칸을 숨김
+    linksList.querySelectorAll('.link-card').forEach((card, i) => card.classList.toggle('is-editing', i === index));
+    linksList.classList.toggle('is-adding', index < 0);
+    linkForm.elements.name.focus();
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    linkForm.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+  }
+
+  function showFormError(message) {
+    formError.textContent = message;
+    linkForm.elements.url.setAttribute('aria-invalid', String(message !== ''));
+  }
+
+  function closeForm() {
+    linkForm.hidden = true;
+    showFormError('');
+  }
+
+  // 저장·삭제·취소 뒤: 칸을 닫고, 키보드 포커스를 고치던 카드(없으면 편집 버튼)로 돌려줌
+  function finishForm(focusIndex) {
+    closeForm();
+    renderLinks();
+    const cards = linksList.querySelectorAll('.link-card:not(.is-add)');
+    const target = focusIndex < 0 ? linksList.querySelector('.is-add') : cards[Math.min(focusIndex, cards.length - 1)];
+    (target || editButton).focus();
+  }
+
+  function setEditing(on) {
+    editing = on;
+    editButton.textContent = on ? '완료' : '편집';
+    document.getElementById('links-note').textContent = on ? ' (카드를 누르면 고칠 수 있음)' : ' (모두 새 탭에서 열림)';
+    if (!on) {
+      closeForm();
+      hideUndo();
+    }
+    renderLinks();
+  }
+
+  function hasSavedLinks() {
+    try {
+      return localStorage.getItem(LINKS_KEY) !== null;
+    } catch {
+      return false;
+    }
+  }
+
+  editButton.addEventListener('click', () => setEditing(!editing));
+
+  resetButton.addEventListener('click', () => {
+    const previous = links;
+    try {
+      if (localStorage.getItem(LINKS_KEY) === null) {
+        showStatus('이미 기본 목록이에요.');
+        return;
+      }
+      localStorage.removeItem(LINKS_KEY);
+    } catch {
+      showStatus('기본 목록으로 돌리지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.');
+      return;
+    }
+    links = DEFAULTS;
+    closeForm();
+    renderLinks();
+    editButton.focus(); // 누른 버튼이 사라지니 포커스를 편집 버튼으로
+    offerUndo('기본 목록으로 돌렸어요.', previous);
+  });
+
+  linkForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const url = normalizeUrl(linkForm.elements.url.value);
+    if (!url) {
+      showFormError(linkForm.elements.url.value.trim() ? '주소를 확인해 주세요. 예: naver.com' : '주소를 넣어 주세요.');
+      linkForm.elements.url.focus();
+      return;
+    }
+    const name = cleanName(linkForm.elements.name.value) || shortHost(url);
+    const item = { name, url };
+    const next = editingIndex < 0
+      ? [...links, item]
+      : links.map((link, index) => (index === editingIndex ? item : link));
+    if (next.length > MAX_LINKS) {
+      showFormError(`사이트는 ${MAX_LINKS}개까지 넣을 수 있어요.`);
+      return;
+    }
+    if (!saveLinks(next)) return;
+    finishForm(editingIndex < 0 ? next.length - 1 : editingIndex);
+  });
+
+  linkForm.querySelector('[data-action="cancel"]').addEventListener('click', () => finishForm(editingIndex));
+
+  linkForm.querySelector('[data-action="delete"]').addEventListener('click', () => {
+    const previous = links;
+    const removed = links[editingIndex];
+    if (!saveLinks(links.filter((_, index) => index !== editingIndex))) return;
+    finishForm(editingIndex);
+    offerUndo(`'${removed.name}'을(를) 지웠어요.`, previous);
+  });
+
+  // 다른 탭에서 목록을 고치면 이 탭에도 반영
+  addEventListener('storage', (event) => {
+    if (event.key !== LINKS_KEY && event.key !== null) return;
+    links = loadLinks();
+    closeForm(); // 고치던 칸의 위치가 바뀌었을 수 있으니 닫음
+    hideUndo();  // 다른 탭의 새 목록을 옛 목록으로 덮어쓰지 않게
+    renderLinks();
+  });
+
+  renderLinks();
+
+  // ---- 단축키: / = 검색창, 1~9 = 링크 열기, 검색창에서 Esc = 빠져나오기(그다음 숫자 키), 메모·추가 칸에서 Esc = 나가기 ----
+  document.addEventListener('keydown', () => document.documentElement.classList.add('used-keyboard'), { once: true });
+  document.addEventListener('keydown', (event) => {
+    // isComposing·229 = 한글 입력 중 (Safari는 229로만 알려 줌)
+    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.isComposing || event.keyCode === 229) return;
+    if (event.key === 'Escape' && event.target === search) {
+      event.preventDefault(); // 검색창이 쓰던 글을 지우지 않게
+      search.blur();
+      return;
+    }
+    if (event.key === 'Escape' && event.target === memo) {
+      search.focus();
+      return;
+    }
+    if (event.key === 'Escape' && linkForm.contains(event.target)) {
+      finishForm(editingIndex);
+      return;
+    }
+    if (event.target instanceof Element && event.target.closest('input, textarea')) return;
+    if (event.key === '/') {
+      event.preventDefault();
+      search.focus();
+      return;
+    }
+    const card = /^[1-9]$/.test(event.key) ? linksList.querySelectorAll('a.link-card')[Number(event.key) - 1] : null;
+    if (card) card.click();
+  });
+</script>
+</body>
+</html>
