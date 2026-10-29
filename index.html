@@ -3,14 +3,15 @@
 <head>
 <meta charset="utf-8">
 <!-- 보안 설정: 이 파일, Pretendard 폰트(cdn.jsdelivr.net), 사이트 아이콘(icons.duckduckgo.com),
-     구글 검색만 허용합니다.
+     날씨(api.open-meteo.com, geocoding-api.open-meteo.com), 구글 검색만 허용합니다.
      무언가 추가했는데 오류 없이 안 되면 이 줄 때문이에요. 이렇게 주소를 넣으세요.
      - 이미지:         img-src 뒤에 이미지 주소 추가 (글 속 이미지면 data: 도)
      - 다른 폰트:      CSS 주소는 style-src 에, 폰트 파일 주소는 font-src 에 추가
                        (구글 폰트: https://fonts.googleapis.com / https://fonts.gstatic.com)
+     - 다른 데이터:    connect-src 뒤에 주소 추가
      - 네이버 검색:    form-action 에 https://search.naver.com 추가, 그리고 아래 <form> 의
                        action 을 https://search.naver.com/search.naver 로, name="q" 를 name="query" 로 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net; img-src https://icons.duckduckgo.com; form-action https://www.google.com; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net; img-src https://icons.duckduckgo.com; connect-src https://api.open-meteo.com https://geocoding-api.open-meteo.com; form-action https://www.google.com; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>데이플립</title>
@@ -26,7 +27,7 @@
     --ink: #1d1d1f;       /* 글씨 (애플 검정) */
     --ink-soft: #6e6e73;  /* 작은 글씨 */
     --sun: #e30000;       /* 일요일, 공휴일 (애플 캘린더 빨강, 글씨로 읽히게 조금 진하게) */
-    --sat: #0066cc;       /* 토요일 (애플 링크 파랑) */
+    --sat: #0066cc;       /* 토요일, 기념일 (애플 링크 파랑) */
     --binding: #1d1d1f;   /* 일력 위 검은 띠 */
     --pad-1: #dcdce1;     /* 일력 밑에 남은 종이 (가까운 장) */
     --pad-2: #d2d2d7;     /* 일력 밑에 남은 종이 (먼 장) */
@@ -57,7 +58,7 @@
       --pad-2: #232325;
       --chip: #2c2c2e;
       --chip-ink: #aeaeb2;
-      --icon-plate: #d1d1d6; /* 다크 모드에선 밝은 받침이라야 검은 아이콘이 보임 */
+      --icon-plate: #8e8e93; /* 중간 회색: 검은 아이콘도 보이고 너무 튀지 않게 */
       --error: #ff6961;
       --button: #0071e3;
       --button-hover: #0060c0;
@@ -83,6 +84,7 @@
   }
   ::selection { background: var(--select); color: var(--ink); }
   :focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+  [hidden] { display: none !important; }
 
   main {
     display: grid;
@@ -162,30 +164,143 @@
     font-weight: 600;
     letter-spacing: -.02em;
   }
-  .holiday {
+  .holiday, .anniv {
     margin-top: 6px;
     font-size: clamp(15px, 1.4vw, 19px);
     font-weight: 600;
     color: var(--sun);
   }
-  .holiday:empty { display: none; }
+  .anniv { color: var(--sat); } /* 기념일은 파랑 (공휴일 빨강과 구별) */
+  .holiday:empty, .anniv:empty, .dday:empty { display: none; }
+  /* 가장 가까운 D-day 하나: 작은 칩 */
+  .dday { display: flex; justify-content: center; margin-top: 14px; }
+  .dday-chip {
+    display: inline-flex;
+    gap: 6px;
+    align-items: baseline;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: var(--chip);
+    color: var(--chip-ink);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .dday-chip b { color: var(--ink); font-weight: 600; }
   .is-sun .num, .is-sun .dow { color: var(--sun); }
   .is-sat .num, .is-sat .dow { color: var(--sat); }
   .foot {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: baseline;
+    gap: 6px 16px;
     padding-top: 14px;
     font-size: 15px;
     font-weight: 600;
     color: var(--ink-soft);
   }
-  .clock {
+  .foot-right { display: flex; align-items: baseline; gap: 18px; margin-left: auto; }
+  .clock, .wx-main {
     font-size: 30px;
     font-weight: 600;
     letter-spacing: -.02em;
     color: var(--ink);
   }
+  /* 날씨: 시계 옆, 글자만. 누르면 출처(Open-Meteo)가 새 탭에서 열림 */
+  .weather { display: inline-flex; align-items: baseline; gap: 8px; color: inherit; text-decoration: none; border-radius: 6px; }
+  .weather:hover .wx-place { text-decoration: underline; text-underline-offset: 3px; }
+  .wx-place, .wx-sub { font-size: 15px; font-weight: 600; color: var(--ink-soft); }
+  .wx-main { font-variant-numeric: tabular-nums; }
+
+  /* 일력 종이 아래 벽의 '설정' 버튼 */
+  .settings-open { position: absolute; right: 0; top: calc(100% + 18px); }
+  /* 일력 종이 뒷면 = 설정 */
+  .sheet-back {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    overflow: auto;
+    overscroll-behavior: contain;
+    border-top: 14px solid var(--binding);
+    padding: clamp(20px, 3vh, 32px) clamp(24px, 3vw, 40px);
+  }
+  .calendar.is-back .sheet { visibility: hidden; }
+  .set-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 22px; }
+  .set-head h2 { margin: 0; font-size: 21px; color: var(--ink); }
+  .set-body { display: grid; gap: 26px; }
+  .set-body h3 { margin-bottom: 10px; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+  .seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--wall); }
+  .seg button {
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-soft);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
+  .field {
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--wall);
+    color: var(--ink);
+    font: inherit;
+    font-size: 17px;
+  }
+  .field::placeholder { color: var(--ink-soft); }
+  .row-form { display: flex; gap: 8px; }
+  .row-form .pill-button { flex: none; width: auto; height: 44px; padding: 0 18px; }
+  .set-note { margin-top: 8px; font-size: 15px; color: var(--ink-soft); }
+  .set-note b { color: var(--ink); font-weight: 600; }
+  .cands { display: grid; gap: 2px; margin-top: 8px; padding: 0; list-style: none; }
+  .cands button {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .cands button:hover { background: var(--wall); }
+  .cands small { color: var(--ink-soft); font-size: 13px; }
+  .credit { margin-top: 8px; font-size: 13px; color: var(--ink-soft); }
+  .credit a { color: inherit; text-underline-offset: 2px; }
+  .dates { display: grid; gap: 2px; padding: 0; list-style: none; }
+  .dates li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 8px 8px 14px;
+    border-radius: 6px;
+    background: var(--wall);
+    font-size: 15px;
+  }
+  .dates .date-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dates .date-when { margin-left: auto; color: var(--ink-soft); font-size: 13px; white-space: nowrap; }
+  .dates .text-button { font-size: 13px; }
+  .dates li.dates-empty { padding-left: 0; background: none; color: var(--ink-soft); }
+  .date-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 8px; margin-top: 12px; align-items: center; }
+  .date-form .wide { grid-column: 1 / -1; }
+  .date-form select.field { width: auto; padding-right: 12px; }
+  .lunar-pick { display: flex; gap: 8px; }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 15px; color: var(--ink); }
+  .check input { width: 18px; height: 18px; accent-color: var(--button); }
+  .date-form .pill-button { height: 44px; }
 
   /* ---- 오른쪽: 검색과 링크는 위에 붙이고, 메모는 아래로 내려 일력 아랫선에 맞춤 ---- */
   .tools {
@@ -253,7 +368,7 @@
     opacity: 0;
     transition: opacity .2s ease-out;
   }
-  .used-keyboard .search:focus-within:has(input:placeholder-shown) + .key-hint { opacity: 1; }
+  .used-keyboard .search:has(input:focus):has(input:placeholder-shown) + .key-hint { opacity: 1; }
   .key-hint kbd:first-child { margin-left: 0; }
   @media (hover: none) {
     .key-hint, h2 kbd, a.link-card::before { display: none; } /* 키보드 없는 화면에선 단축키 표시를 숨김 */
@@ -276,7 +391,7 @@
   }
   .text-button:hover { text-decoration: underline; text-underline-offset: 3px; }
   .text-button.is-danger { color: var(--sun); }
-  .section-head .text-button, .links-status .text-button { color: var(--wall-action); }
+  .section-head .text-button, .links-status .text-button, .settings-open { color: var(--wall-action); }
   .head-actions { display: flex; gap: 4px; }
 
   .links {
@@ -287,6 +402,7 @@
     padding: 0;
     counter-reset: link;
   }
+  .links li { position: relative; }
   /* 링크 카드: 위에 사이트 아이콘, 아래에 이름과 주소 */
   .link-card {
     display: flex;
@@ -317,6 +433,38 @@
   .link-card .label { display: flex; flex-direction: column; min-width: 0; }
   .link-card .name, .link-card .url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .link-card.is-add { justify-content: center; align-items: center; color: var(--focus); font-size: 17px; font-weight: 600; }
+  /* 오른쪽 위 작은 숫자 = 그 숫자 키를 누르면 바로 열림 (화면 읽기 프로그램은 읽지 않음). 편집 중에도 보임 */
+  .link-card:not(.is-add)::before {
+    counter-increment: link;
+    content: counter(link);      /* 오래된 브라우저용 */
+    content: counter(link) / "";
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    padding: 1px 7px;
+    border-radius: 6px;
+    background: var(--chip);
+    color: var(--chip-ink);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  /* 편집 중: 순서 바꾸기 버튼(앞으로·뒤로), 카드 오른쪽 아래 */
+  .move { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 4px; }
+  .move button {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: var(--chip);
+    color: var(--chip-ink);
+    cursor: pointer;
+  }
+  .move button:disabled { opacity: .35; cursor: default; }
+  .move svg { width: 14px; height: 14px; }
+  .links:not(.is-many) button.link-card:not(.is-add) .label { padding-right: 68px; } /* 순서 버튼과 겹치지 않게 */
   /* 사이트가 5개 이상이면 넓은 화면에서 3줄로, 카드는 낮게 (메모가 화면 밖으로 밀리지 않게) */
   .links.is-many .link-card {
     flex-direction: row;
@@ -330,7 +478,9 @@
   .links.is-many .link-card.is-add { justify-content: center; padding: 12px 16px; }
   .links.is-many .name { font-size: 17px; }
   .links.is-many .url { display: none; }
-  .links.is-many button.link-card:not(.is-add) { padding-right: 60px; } /* '고치기' 글자 자리 */
+  .links.is-many button.link-card:not(.is-add) { padding-right: 116px; } /* 숫자 칩 + 순서 버튼 자리 */
+  .links.is-many button.link-card:not(.is-add)::before { right: 84px; }
+  .links.is-many .move { top: 50%; bottom: auto; right: 10px; transform: translateY(-50%); }
   @media (min-width: 1200px) {
     .links.is-many { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
@@ -343,29 +493,16 @@
   .link-card.is-editing { outline: 3px dashed var(--focus); outline-offset: 3px; } /* 점선 = 지금 고치는 카드 (실선 = 포커스) */
   .links.is-adding .is-add { display: none; }
   .links-empty { grid-column: 1 / -1; padding: 8px 0; font-size: 15px; color: var(--wall-ink); }
-  /* 오른쪽 위 작은 숫자 = 그 숫자 키를 누르면 바로 열림 (화면 읽기 프로그램은 읽지 않음) */
-  a.link-card::before, button.link-card:not(.is-add)::before {
-    counter-increment: link;
-    content: counter(link);      /* 오래된 브라우저용 */
-    content: counter(link) / "";
-    position: absolute;
-    top: 14px;
-    right: 18px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink-soft);
-  }
-  a.link-card::before { padding: 1px 7px; border-radius: 6px; background: var(--chip); color: var(--chip-ink); }
-  button.link-card:not(.is-add)::before { content: "고치기"; content: "고치기" / ""; color: var(--focus); }
   .link-card:hover, .link-card:focus-visible { transform: translateY(-3px); }
 
   /* 삭제·기본 목록 뒤 '되돌리기' 줄 */
   .links-status { display: flex; align-items: baseline; gap: 4px; font-size: 15px; color: var(--wall-ink); }
   .links-status.is-shown { margin-top: 12px; }
+  .sheet-back .links-status { color: var(--ink-soft); }
+  .sheet-back .links-status .text-button { color: var(--focus); }
 
   /* 사이트 추가·고치기 칸 */
   .link-form { display: grid; gap: 14px; margin-top: 18px; padding: 20px 22px; }
-  .link-form[hidden] { display: none; }
   .link-form h3 { font-size: 17px; font-weight: 600; }
   .link-form label { display: grid; gap: 6px; font-size: 15px; font-weight: 600; color: var(--ink-soft); }
   .link-form input {
@@ -432,51 +569,126 @@
 
   /* 창이 좁으면 위아래로 쌓기 */
   @media (max-width: 860px) {
-    main { grid-template-columns: minmax(0, 1fr); }
+    main { grid-template-columns: minmax(0, 1fr); row-gap: 72px; }
     .calendar { position: relative; top: 0; }
     .sheet, .tools { min-height: 0; }
     .tools { gap: 40px; }
     .num { font-size: clamp(8rem, 42vw, 14rem); }
+    /* 좁은 화면: 설정 뒷면은 종이 대신 제자리에 펼침 */
+    .sheet-back { position: relative; inset: auto; overflow: visible; }
+    .calendar.is-back .sheet { display: none; }
+  }
+  @media (max-width: 520px) {
+    .wx-place { display: none; } /* 아랫줄이 넘치지 않게 도시·날씨 낱말은 숨김 */
   }
 </style>
 </head>
 <body>
 <main>
-  <h1 class="visually-hidden">데이플립 (DayFlip)</h1>
-  <section class="calendar" aria-label="오늘 날짜">
+  <h1 class="visually-hidden" data-t="appTitle">데이플립 (DayFlip)</h1>
+  <section class="calendar" id="calendar" data-t-label="todayRegion" aria-label="오늘 날짜">
     <div class="sheet paper" id="sheet">
-      <div class="top">
+      <div class="top" aria-hidden="true">
         <span class="ym"></span>
         <span class="lunar"></span>
       </div>
-      <div class="day">
+      <div class="day" aria-hidden="true">
         <div class="num"></div>
         <div class="dow"></div>
         <div class="holiday"></div>
+        <div class="anniv"></div>
+        <div class="dday"></div>
       </div>
+      <!-- 화면 읽기 프로그램용 한 문장 (예: 2026년 10월 29일 목요일, 음력 9월 19일) -->
+      <p class="visually-hidden sheet-sentence"></p>
       <div class="foot">
         <span class="doy"></span>
-        <time class="clock"></time>
+        <div class="foot-right">
+          <span class="weather-slot"></span>
+          <time class="clock"></time>
+        </div>
       </div>
     </div>
+
+    <!-- 일력 종이 뒷면 = 설정. '설정'을 누르면 종이가 뒤집힙니다 -->
+    <div class="sheet-back paper" id="sheet-back" role="region" aria-labelledby="settings-title" hidden>
+      <div class="set-head">
+        <h2 id="settings-title" tabindex="-1" data-t="settings">설정</h2>
+        <button type="button" class="text-button" id="settings-done" data-t="done">완료</button>
+      </div>
+      <div class="set-body">
+        <section>
+          <h3 id="lang-label" data-t="language">언어</h3>
+          <!-- 언어 이름은 언제나 그 언어 자기 이름으로 -->
+          <div class="seg" role="group" aria-labelledby="lang-label">
+            <button type="button" data-lang="ko" lang="ko">한국어</button>
+            <button type="button" data-lang="en" lang="en">English</button>
+          </div>
+        </section>
+        <section>
+          <h3 id="region-label" data-t="region">달력 나라</h3>
+          <div class="seg" role="group" aria-labelledby="region-label">
+            <button type="button" data-region="KR" data-t="regionKR">한국</button>
+            <button type="button" data-region="US" data-t="regionUS">미국</button>
+          </div>
+        </section>
+        <section>
+          <h3 id="city-label" data-t="city">날씨 도시</h3>
+          <form class="row-form" id="city-form" novalidate>
+            <input class="field" id="city-input" type="search" autocomplete="off" maxlength="100" aria-labelledby="city-label" aria-describedby="city-error" data-t-placeholder="cityPlaceholder">
+            <button type="submit" class="pill-button" data-t="find">찾기</button>
+          </form>
+          <ul class="cands" id="city-cands"></ul>
+          <p class="form-error" id="city-error" role="alert"></p>
+          <p class="set-note" id="city-current"></p>
+          <p class="credit">
+            <span data-t="creditWeather">날씨</span>: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> ·
+            <span data-t="creditPlaces">도시</span>: <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>
+          </p>
+        </section>
+        <section>
+          <h3 id="dates-label" data-t="dates">기념일 · D-day</h3>
+          <ul class="dates" id="dates-list" aria-labelledby="dates-label"></ul>
+          <p class="links-status" id="dates-status" role="status"><span></span><button type="button" class="text-button" data-t="undo" hidden>되돌리기</button></p>
+          <form class="date-form" id="date-form" novalidate>
+            <input class="field wide" name="name" maxlength="20" autocomplete="off" data-t-placeholder="datePlaceholder" data-t-label="dateName" aria-describedby="date-error">
+            <div class="seg" role="group" data-t-label="calendarKind">
+              <button type="button" data-cal="solar" aria-pressed="true" data-t="solar">양력</button>
+              <button type="button" data-cal="lunar" aria-pressed="false" data-t="lunar">음력</button>
+            </div>
+            <span></span>
+            <input class="field wide" name="date" type="date" data-t-label="dateValue">
+            <div class="lunar-pick wide" hidden>
+              <select class="field" name="lunarMonth" data-t-label="lunarMonthLabel"></select>
+              <select class="field" name="lunarDay" data-t-label="lunarDayLabel"></select>
+            </div>
+            <label class="check wide"><input type="checkbox" name="repeat" checked> <span data-t="repeat">해마다 반복 (끄면 D-day)</span></label>
+            <p class="form-error wide" id="date-error" role="alert"></p>
+            <button type="submit" class="pill-button" data-t="add">추가</button>
+          </form>
+        </section>
+      </div>
+    </div>
+
+    <button type="button" class="text-button settings-open" id="settings-open" aria-controls="sheet-back" aria-expanded="false" data-t="settings">설정</button>
   </section>
 
   <div class="tools">
     <section>
-      <h2 id="search-label">검색<span class="visually-hidden"> (결과는 새 탭에서 열림)</span><kbd aria-hidden="true">/</kbd></h2>
+      <h2 id="search-label"><span data-t="search">검색</span><span class="visually-hidden" data-t="searchNote"> (결과는 새 탭에서 열림)</span><kbd aria-hidden="true">/</kbd></h2>
       <!-- target="_blank" = 결과를 새 탭에서 열기 (이 시작 페이지는 그대로 남음) -->
       <form class="search paper" action="https://www.google.com/search" method="get" target="_blank" rel="noopener noreferrer" role="search">
-        <input name="q" type="search" placeholder="구글에서 검색" aria-labelledby="search-label" aria-keyshortcuts="/" autocomplete="off" required>
-        <button type="submit">검색</button>
+        <input name="q" type="search" placeholder="구글에서 검색" data-t-placeholder="searchPlaceholder" aria-labelledby="search-label" aria-keyshortcuts="/" autocomplete="off" required>
+        <button type="submit" data-t="searchButton">검색</button>
       </form>
-      <p class="key-hint" aria-hidden="true"><kbd>Esc</kbd> 로 검색창에서 나가면 <kbd>1</kbd>~<kbd>9</kbd> 로 자주 가는 곳이 바로 열려요</p>
+      <p class="key-hint" id="key-hint" aria-hidden="true"></p>
     </section>
 
     <section>
       <div class="section-head">
-        <h2 id="links-label">자주 가는 곳<span class="visually-hidden" id="links-note"> (모두 새 탭에서 열림)</span></h2>
+        <h2 id="links-label"><span data-t="links">자주 가는 곳</span><span class="visually-hidden" id="links-note"></span></h2>
         <div class="head-actions">
-          <button type="button" class="text-button" id="links-reset" hidden>기본 목록으로</button>
+          <button type="button" class="text-button" id="links-reset" data-t="reset" hidden>기본 목록으로</button>
           <button type="button" class="text-button" id="links-edit">편집</button>
         </div>
       </div>
@@ -484,112 +696,463 @@
            주의: 페이지의 '편집'으로 한 번이라도 고치면 이 브라우저에서는 그 목록이 먼저예요.
            파일의 목록을 다시 보려면 페이지에서 '편집' → '기본 목록으로'를 누르세요. (메모는 그대로) -->
       <ul class="links" aria-labelledby="links-label"></ul>
-      <p class="links-status" id="links-status" role="status"><span></span><button type="button" class="text-button" hidden>되돌리기</button></p>
+      <p class="links-status" id="links-status" role="status"><span></span><button type="button" class="text-button" data-t="undo" hidden>되돌리기</button></p>
       <form class="link-form paper" id="link-form" hidden novalidate>
-        <h3 id="link-form-title">사이트 추가</h3>
-        <label>이름 (선택) <input name="name" maxlength="20" autocomplete="off" placeholder="예: 네이버"></label>
-        <label>주소 <input name="url" inputmode="url" autocomplete="off" maxlength="2048" placeholder="예: naver.com" aria-describedby="link-form-error"></label>
+        <h3 id="link-form-title"></h3>
+        <label><span data-t="labelUrl">주소</span> <input name="url" inputmode="url" autocomplete="off" maxlength="2048" data-t-placeholder="placeholderUrl" aria-describedby="link-form-error"></label>
+        <label><span data-t="labelName">이름 (선택)</span> <input name="name" maxlength="20" autocomplete="off" data-t-placeholder="placeholderName"></label>
         <p class="form-error" id="link-form-error" role="alert"></p>
         <div class="form-actions">
-          <button type="submit" class="pill-button">저장</button>
-          <button type="button" class="text-button" data-action="cancel">취소</button>
-          <button type="button" class="text-button is-danger" data-action="delete">삭제</button>
+          <button type="submit" class="pill-button" data-t="save">저장</button>
+          <button type="button" class="text-button" data-action="cancel" data-t="cancel">취소</button>
+          <button type="button" class="text-button is-danger" data-action="delete" data-t="delete">삭제</button>
         </div>
       </form>
     </section>
 
     <section>
-      <h2><label for="memo">오늘의 메모</label></h2>
+      <h2><label for="memo" data-t="memoTitle">오늘의 메모</label></h2>
       <div class="memo paper">
-        <textarea id="memo" rows="2" maxlength="60" placeholder="오늘 할 일 한두 줄" aria-describedby="memo-hint"></textarea>
+        <textarea id="memo" rows="2" maxlength="60" data-t-placeholder="memoPlaceholder" aria-describedby="memo-hint"></textarea>
         <span class="memo-count" id="memo-count" aria-hidden="true"></span>
       </div>
-      <p class="hint" id="memo-hint" role="status">자정에 일력과 함께 지워져요 · 이 브라우저에만 저장 · 비밀번호는 적지 마세요</p>
+      <p class="hint" id="memo-hint" role="status"></p>
     </section>
   </div>
 </main>
 
 <script>
-  const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+  // =====================================================================
+  // 1. 글자 모음 (한국어 / 영어)
+  //    화면에 나오는 글자는 모두 여기 있어요. 문구를 바꾸고 싶으면 여기서 고치세요.
+  //    다른 언어를 늘리려면 ko/en과 같은 모양으로 한 덩어리를 더 만들면 됩니다.
+  // =====================================================================
+  const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const WEEKDAYS = {
+    ko: ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'],
+    en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  };
+  const TEXT = {
+    ko: {
+      appTitle: '데이플립 (DayFlip)',
+      todayRegion: '오늘 날짜',
+      search: '검색',
+      searchNote: ' (결과는 새 탭에서 열림)',
+      searchPlaceholder: '구글에서 검색',
+      searchButton: '검색',
+      keyHint: ['Esc', ' 로 검색창에서 나가면 ', '1', '~', '9', ' 로 자주 가는 곳이 바로 열려요'],
+      links: '자주 가는 곳',
+      linksNoteView: ' (모두 새 탭에서 열림)',
+      linksNoteEdit: ' (카드를 누르면 고칠 수 있음, 앞으로·뒤로 버튼으로 순서 바꾸기)',
+      edit: '편집',
+      done: '완료',
+      reset: '기본 목록으로',
+      undo: '되돌리기',
+      addSite: '사이트 추가',
+      editSite: '사이트 고치기',
+      labelUrl: '주소',
+      labelName: '이름 (선택)',
+      placeholderUrl: '예: naver.com',
+      placeholderName: '예: 네이버',
+      save: '저장',
+      cancel: '취소',
+      delete: '삭제',
+      errUrlEmpty: '주소를 넣어 주세요.',
+      errUrlBad: '주소를 확인해 주세요. 예: naver.com',
+      errLinksMax: (n) => `사이트는 ${n}개까지 넣을 수 있어요.`,
+      errStorage: '저장하지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.',
+      linksEmpty: '편집을 눌러 자주 가는 사이트를 추가해 보세요.',
+      alreadyDefault: '이미 기본 목록이에요.',
+      resetDone: '기본 목록으로 돌렸어요.',
+      resetFail: '기본 목록으로 돌리지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.',
+      undoFail: '되돌리지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.',
+      removed: (name) => `'${name}'을(를) 지웠어요.`,
+      editCard: (name) => `${name} 고치기`,
+      moveEarlier: (name) => `${name} 앞으로`,
+      moveLater: (name) => `${name} 뒤로`,
+      memoTitle: '오늘의 메모',
+      memoPlaceholder: '오늘 할 일 한두 줄',
+      memoHint: '자정에 일력과 함께 지워져요 · 이 브라우저에만 저장 · 비밀번호는 적지 마세요',
+      memoSaveFail: '메모를 저장하지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.',
+      memoNoStorage: '이 브라우저에서는 메모를 저장할 수 없어요.',
+      settings: '설정',
+      language: '언어',
+      region: '달력 나라',
+      regionKR: '한국',
+      regionUS: '미국',
+      city: '날씨 도시',
+      cityPlaceholder: '도시 이름 (예: 서울특별시, Seoul)',
+      find: '찾기',
+      cityNone: '아직 고르지 않았어요. 도시를 찾아 골라 주세요.',
+      cityCurrent: (name) => `지금 도시: ${name}`,
+      cityOff: '날씨 끄기',
+      cityNotFound: "도시를 찾지 못했어요. '서울특별시'나 'Seoul'처럼 써 보세요.",
+      cityOffline: '인터넷 연결을 확인해 주세요.',
+      cityTooShort: '두 글자 이상 써 주세요.',
+      creditWeather: '날씨',
+      creditPlaces: '도시',
+      showWeather: '날씨 보기',
+      weatherTitle: 'Weather data by Open-Meteo.com',
+      dates: '기념일 · D-day',
+      datesEmpty: '아직 없어요. 아래에서 추가해 보세요.',
+      dateName: '이름',
+      datePlaceholder: '이름 (예: 엄마 생신, 토익 시험)',
+      calendarKind: '양력 또는 음력',
+      solar: '양력',
+      lunar: '음력',
+      dateValue: '날짜',
+      lunarMonthLabel: '음력 월',
+      lunarDayLabel: '음력 일',
+      lunarMonthOption: (m) => `${m}월`,
+      lunarDayOption: (d) => `${d}일`,
+      repeat: '해마다 반복 (끄면 D-day)',
+      add: '추가',
+      errDateName: '이름을 넣어 주세요.',
+      errDateValue: '날짜를 골라 주세요.',
+      errDdayPast: '지난 날짜는 D-day로 넣을 수 없어요.',
+      errDatesMax: (n) => `기념일과 D-day는 합쳐서 ${n}개까지 넣을 수 있어요.`,
+      dateAnnivSolar: (m, d) => `해마다 ${m}월 ${d}일`,
+      dateAnnivLunar: (m, d) => `해마다 음력 ${m}월 ${d}일`,
+      dateDday: (y, m, d, n) => `${y}년 ${m}월 ${d}일 · ${n === 0 ? 'D-day' : `D-${n}`}`,
+      deleteDate: (name) => `${name} 삭제`,
+      weatherWords: {
+        0: '맑음', 1: '대체로 맑음', 2: '구름 조금', 3: '흐림', 45: '안개', 48: '안개',
+        51: '이슬비', 53: '이슬비', 55: '이슬비', 56: '언 이슬비', 57: '언 이슬비',
+        61: '비', 63: '비', 65: '폭우', 66: '언 비', 67: '언 비',
+        71: '눈', 73: '눈', 75: '눈', 77: '싸락눈', 80: '소나기', 81: '소나기', 82: '소나기',
+        85: '소낙눈', 86: '소낙눈', 95: '뇌우', 96: '우박 뇌우', 97: '뇌우', 99: '우박 뇌우'
+      },
+      yearMonth: (y, m) => `${y}년 ${m}월`,
+      lunarLine: (m, d, leap) => `음력 ${leap ? '윤' : ''}${m}월 ${d}일`,
+      dayOfYear: (n) => `올해 ${n}번째 날`,
+      tabTitle: (m, d, w) => `${m}월 ${d}일 ${WEEKDAYS.ko[w]} · 데이플립`,
+      sentenceDate: (y, m, d, w) => `${y}년 ${m}월 ${d}일 ${WEEKDAYS.ko[w]}`,
+      ddayChip: (n) => (n === 0 ? 'D-day' : `D-${n}`)
+    },
+    en: {
+      appTitle: 'DayFlip',
+      todayRegion: 'Today',
+      search: 'Search',
+      searchNote: ' (results open in a new tab)',
+      searchPlaceholder: 'Search Google',
+      searchButton: 'Search',
+      keyHint: ['Esc', ' to leave search, then ', '1', '–', '9', ' to open a favorite'],
+      links: 'Favorites',
+      linksNoteView: ' (all open in a new tab)',
+      linksNoteEdit: ' (select a card to edit it; use the earlier and later buttons to reorder)',
+      edit: 'Edit',
+      done: 'Done',
+      reset: 'Reset to defaults',
+      undo: 'Undo',
+      addSite: 'Add site',
+      editSite: 'Edit site',
+      labelUrl: 'Address',
+      labelName: 'Name (optional)',
+      placeholderUrl: 'e.g. naver.com',
+      placeholderName: 'e.g. Naver',
+      save: 'Save',
+      cancel: 'Cancel',
+      delete: 'Delete',
+      errUrlEmpty: 'Enter an address.',
+      errUrlBad: 'Check the address, e.g. naver.com',
+      errLinksMax: (n) => `You can add up to ${n} sites.`,
+      errStorage: "Couldn't save. Check your browser's storage settings.",
+      linksEmpty: 'Select Edit to add your favorite sites.',
+      alreadyDefault: 'Already the default list.',
+      resetDone: 'Reset to the default list.',
+      resetFail: "Couldn't reset. Check your browser's storage settings.",
+      undoFail: "Couldn't undo. Check your browser's storage settings.",
+      removed: (name) => `Removed "${name}".`,
+      editCard: (name) => `Edit ${name}`,
+      moveEarlier: (name) => `Move ${name} earlier`,
+      moveLater: (name) => `Move ${name} later`,
+      memoTitle: "Today's memo",
+      memoPlaceholder: 'A line or two for today',
+      memoHint: "Cleared at midnight with the sheet · Saved only in this browser · Don't write passwords",
+      memoSaveFail: "Couldn't save the memo. Check your browser's storage settings.",
+      memoNoStorage: "This browser can't save the memo.",
+      settings: 'Settings',
+      language: 'Language',
+      region: 'Calendar region',
+      regionKR: 'Korea',
+      regionUS: 'United States',
+      city: 'Weather city',
+      cityPlaceholder: 'City name (e.g. Seoul)',
+      find: 'Find',
+      cityNone: 'Not set yet. Find and pick a city.',
+      cityCurrent: (name) => `Current city: ${name}`,
+      cityOff: 'Turn off weather',
+      cityNotFound: "Couldn't find that city. Try a full name like 'Seoul'.",
+      cityOffline: 'Check your internet connection.',
+      cityTooShort: 'Type at least two letters.',
+      creditWeather: 'Weather',
+      creditPlaces: 'Places',
+      showWeather: 'Show weather',
+      weatherTitle: 'Weather data by Open-Meteo.com',
+      dates: 'Anniversaries · D-days',
+      datesEmpty: 'None yet. Add one below.',
+      dateName: 'Name',
+      datePlaceholder: "Name (e.g. Mom's birthday, exam)",
+      calendarKind: 'Solar or lunar',
+      solar: 'Solar',
+      lunar: 'Lunar',
+      dateValue: 'Date',
+      lunarMonthLabel: 'Lunar month',
+      lunarDayLabel: 'Lunar day',
+      lunarMonthOption: (m) => `Month ${m}`,
+      lunarDayOption: (d) => `Day ${d}`,
+      repeat: 'Repeats every year (off = D-day)',
+      add: 'Add',
+      errDateName: 'Enter a name.',
+      errDateValue: 'Pick a date.',
+      errDdayPast: "A D-day can't be in the past.",
+      errDatesMax: (n) => `You can add up to ${n} anniversaries and D-days.`,
+      dateAnnivSolar: (m, d) => `Every ${MONTHS_EN[m - 1]} ${d}`,
+      dateAnnivLunar: (m, d) => `Every lunar ${m}/${d}`,
+      dateDday: (y, m, d, n) => `${MONTHS_EN[m - 1].slice(0, 3)} ${d}, ${y} · ${n === 0 ? 'D-day' : `D-${n}`}`,
+      deleteDate: (name) => `Delete ${name}`,
+      weatherWords: {
+        0: 'Clear', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Overcast', 45: 'Fog', 48: 'Fog',
+        51: 'Drizzle', 53: 'Drizzle', 55: 'Drizzle', 56: 'Freezing drizzle', 57: 'Freezing drizzle',
+        61: 'Rain', 63: 'Rain', 65: 'Heavy rain', 66: 'Freezing rain', 67: 'Freezing rain',
+        71: 'Snow', 73: 'Snow', 75: 'Snow', 77: 'Snow grains', 80: 'Showers', 81: 'Showers', 82: 'Showers',
+        85: 'Snow showers', 86: 'Snow showers', 95: 'Thunderstorm', 96: 'Hail storm', 97: 'Thunderstorm', 99: 'Hail storm'
+      },
+      yearMonth: (y, m) => `${MONTHS_EN[m - 1]} ${y}`,
+      lunarLine: (m, d, leap) => `Lunar ${leap ? 'leap ' : ''}${m}/${d}`,
+      dayOfYear: (n, y) => `Day ${n} of ${y}`,
+      tabTitle: (m, d, w) => `${WEEKDAYS.en[w].slice(0, 3)}, ${MONTHS_EN[m - 1].slice(0, 3)} ${d} · DayFlip`,
+      sentenceDate: (y, m, d, w) => `${WEEKDAYS.en[w]}, ${MONTHS_EN[m - 1]} ${d}, ${y}`,
+      ddayChip: (n) => (n === 0 ? 'D-day' : `D-${n}`)
+    }
+  };
 
-  // 공휴일 (양력) — '월-일': '이름'. 새 공휴일이 생기면 여기에 한 줄 추가하세요.
-  // 대체공휴일·임시공휴일·선거일은 날짜가 해마다 달라서 직접 추가해야 해요.
-  const SOLAR_HOLIDAYS = {
-    '1-1': '신정',
-    '3-1': '삼일절',
-    '5-5': '어린이날',
-    '6-6': '현충일',
-    '8-15': '광복절',
-    '10-3': '개천절',
-    '10-9': '한글날',
-    '12-25': '성탄절'
+  // 언어·달력 나라: 이 브라우저에 기억. 처음엔 언어는 브라우저 언어, 달력 나라는 한국
+  const LANG_KEY = 'start-page-lang';
+  const REGION_KEY = 'start-page-region';
+  function loadChoice(key, allowed, fallback) {
+    try {
+      const value = localStorage.getItem(key);
+      return allowed.includes(value) ? value : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  function saveChoice(key, value) {
+    try { localStorage.setItem(key, value); } catch {}
+  }
+  let lang = loadChoice(LANG_KEY, ['ko', 'en'], (navigator.language || '').toLowerCase().startsWith('ko') ? 'ko' : 'en');
+  let region = loadChoice(REGION_KEY, ['KR', 'US'], 'KR');
+
+  function t(key, ...args) {
+    const value = key in TEXT[lang] ? TEXT[lang][key] : TEXT.ko[key];
+    return typeof value === 'function' ? value(...args) : value;
+  }
+
+  // =====================================================================
+  // 2. 공휴일
+  //    [한국어 이름, 영어 이름, (이 해부터)] 모양으로 적어요.
+  // =====================================================================
+  // 한국 (양력) — '월-일'. 새 공휴일이 생기면 여기에 한 줄 추가하세요. ('03-01'처럼 0을 붙여도 괜찮아요)
+  const KR_SOLAR = {
+    '1-1': ['신정', "New Year's Day"],
+    '3-1': ['삼일절', 'Independence Movement Day'],
+    '5-1': ['노동절', 'Labor Day', 2026],
+    '5-5': ['어린이날', "Children's Day"],
+    '6-6': ['현충일', 'Memorial Day'],
+    '7-17': ['제헌절', 'Constitution Day', 2026],
+    '8-15': ['광복절', 'Liberation Day'],
+    '10-3': ['개천절', 'National Foundation Day'],
+    '10-9': ['한글날', 'Hangeul Day'],
+    '12-25': ['성탄절', 'Christmas Day']
   };
-  // 공휴일 (음력) — 음력으로 계산하니 해마다 고칠 필요 없어요. 설·추석은 앞뒤 하루도 연휴.
-  const LUNAR_HOLIDAYS = { '1-1': '설날', '4-8': '부처님오신날', '8-15': '추석' };
-  const THREE_DAY_HOLIDAYS = ['1-1', '8-15'];
-  // 해마다 날짜가 다른 휴일 — '연-월-일': '이름'. 새해가 되면 그해 대체공휴일·선거일을 여기에 추가하세요.
-  // ('03-02'처럼 앞에 0을 붙여 써도 괜찮아요)
-  const EXTRA_HOLIDAYS = {
-    '2026-3-2': '대체공휴일',
-    '2026-5-25': '대체공휴일',
-    '2026-6-3': '지방선거',
-    '2026-8-17': '대체공휴일',
-    '2026-10-5': '대체공휴일',
-    '2027-2-9': '대체공휴일',
-    '2027-8-16': '대체공휴일',
-    '2027-10-4': '대체공휴일',
-    '2027-10-11': '대체공휴일',
-    '2027-12-27': '대체공휴일'
+  // 한국 (음력) — 음력으로 계산하니 해마다 고칠 필요 없어요. 설·추석은 앞뒤 하루도 연휴.
+  const KR_LUNAR = { '1-1': ['설날', 'Seollal'], '4-8': ['부처님오신날', "Buddha's Birthday"], '8-15': ['추석', 'Chuseok'] };
+  const KR_LUNAR_EVE = { '1-1': ['설날 연휴', 'Seollal Holiday'], '8-15': ['추석 연휴', 'Chuseok Holiday'] };
+  // 한국, 해마다 날짜가 다른 휴일 — '연-월-일'. 새해가 되면 그해 대체공휴일·선거일을 여기에 추가하세요.
+  const SUBSTITUTE = ['대체공휴일', 'Substitute Holiday'];
+  const KR_EXTRA = {
+    '2026-3-2': SUBSTITUTE,
+    '2026-5-25': SUBSTITUTE,
+    '2026-6-3': ['지방선거', 'Local Election Day'],
+    '2026-8-17': SUBSTITUTE,
+    '2026-10-5': SUBSTITUTE,
+    '2027-2-9': SUBSTITUTE,
+    '2027-5-3': SUBSTITUTE,
+    '2027-7-19': SUBSTITUTE,
+    '2027-8-16': SUBSTITUTE,
+    '2027-10-4': SUBSTITUTE,
+    '2027-10-11': SUBSTITUTE,
+    '2027-12-27': SUBSTITUTE
   };
+  // 미국 연방 공휴일 — [월, 날짜 또는 [요일(0=일), 몇째(-1=마지막)], 이름]
+  const US_RULES = [
+    [1, 1, ['새해 첫날', "New Year's Day"]],
+    [1, [1, 3], ['마틴 루서 킹 데이', 'Martin Luther King Jr. Day']],
+    [2, [1, 3], ['워싱턴 탄생일', "Washington's Birthday"]],
+    [5, [1, -1], ['메모리얼 데이', 'Memorial Day']],
+    [6, 19, ['준틴스', 'Juneteenth']],
+    [7, 4, ['독립기념일', 'Independence Day']],
+    [9, [1, 1], ['노동절', 'Labor Day']],
+    [10, [1, 2], ['콜럼버스 데이', 'Columbus Day']],
+    [11, 11, ['재향군인의 날', 'Veterans Day']],
+    [11, [4, 4], ['추수감사절', 'Thanksgiving Day']],
+    [12, 25, ['크리스마스', 'Christmas Day']]
+  ];
 
   // '03-01' 처럼 0을 붙여 쓴 날짜도 '3-1' 로 맞춰서 찾음
   function unpadKeys(table) {
-    return Object.fromEntries(Object.entries(table).map(([key, name]) => [key.split('-').map(Number).join('-'), name]));
+    return Object.fromEntries(Object.entries(table).map(([key, value]) => [key.split('-').map(Number).join('-'), value]));
   }
-  const SOLAR_BY_DAY = unpadKeys(SOLAR_HOLIDAYS);
-  const EXTRA_BY_DAY = unpadKeys(EXTRA_HOLIDAYS);
+  const KR_SOLAR_BY_DAY = unpadKeys(KR_SOLAR);
+  const KR_EXTRA_BY_DAY = unpadKeys(KR_EXTRA);
 
-  const sheet = document.getElementById('sheet');
-  const search = document.querySelector('.search input');
-  const memo = document.getElementById('memo');
-  const hint = document.getElementById('memo-hint');
   // dangi = 한국 음력 (chinese는 중국 시간 기준이라 하루씩 틀릴 때가 있음)
   const lunarFormat = new Intl.DateTimeFormat('ko-KR-u-ca-dangi', { month: 'numeric', day: 'numeric' });
-  let shownDay = '';
-
-  function lunarParts(date) {
+  function lunarInfo(date) {
     const parts = lunarFormat.formatToParts(date);
-    return {
-      month: parts.find(p => p.type === 'month')?.value,
-      day: parts.find(p => p.type === 'day')?.value
-    };
+    const month = parts.find(p => p.type === 'month')?.value || '';
+    const day = parts.find(p => p.type === 'day')?.value || '';
+    return { month: Number(month.replace(/\D/g, '')), day: Number(day), leap: !/^\d+$/.test(month) };
   }
-
-  function lunarText(date) {
-    const { month, day } = lunarParts(date);
-    return month && day ? `음력 ${month}월 ${day}일` : '';
-  }
-
-  // 윤달('윤4' 같은 것)은 공휴일 계산에서 빼기 위해 숫자만 있는 달만 돌려줌
+  // 윤달은 공휴일·기념일 계산에서 빼기 위해 평달만 '월-일'로 돌려줌
   function lunarKey(date) {
-    const { month, day } = lunarParts(date);
-    return /^\d+$/.test(month || '') ? `${month}-${day}` : '';
+    const info = lunarInfo(date);
+    return info.month && !info.leap ? `${info.month}-${info.day}` : '';
+  }
+  function addDays(date, n) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + n);
+  }
+  function sameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
 
-  function holidayName(date) {
-    const solar = SOLAR_BY_DAY[`${date.getMonth() + 1}-${date.getDate()}`];
-    if (solar) return solar;
-    const extra = EXTRA_BY_DAY[`${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`];
+  function koreanHoliday(date) {
+    const y = date.getFullYear();
+    const solar = KR_SOLAR_BY_DAY[`${date.getMonth() + 1}-${date.getDate()}`];
+    if (solar && !(solar[2] && y < solar[2])) return solar;
+    const extra = KR_EXTRA_BY_DAY[`${y}-${date.getMonth() + 1}-${date.getDate()}`];
     if (extra) return extra;
-    const lunar = LUNAR_HOLIDAYS[lunarKey(date)];
+    const lunar = KR_LUNAR[lunarKey(date)];
     if (lunar) return lunar;
     for (const shift of [-1, 1]) {
-      const near = new Date(date.getFullYear(), date.getMonth(), date.getDate() + shift);
-      const key = lunarKey(near);
-      if (THREE_DAY_HOLIDAYS.includes(key)) return `${LUNAR_HOLIDAYS[key]} 연휴`;
+      const eve = KR_LUNAR_EVE[lunarKey(addDays(date, shift))];
+      if (eve) return eve;
     }
-    return '';
+    return null;
   }
+
+  // n번째 요일 (n=-1이면 그달 마지막 그 요일)
+  function nthWeekday(y, month, weekday, n) {
+    if (n > 0) return 1 + (weekday - new Date(y, month - 1, 1).getDay() + 7) % 7 + (n - 1) * 7;
+    const last = new Date(y, month, 0);
+    return last.getDate() - (last.getDay() - weekday + 7) % 7;
+  }
+  function usHoliday(date) {
+    for (const [month, rule, name] of US_RULES) {
+      if (typeof rule !== 'number') {
+        if (date.getMonth() + 1 === month && date.getDate() === nthWeekday(date.getFullYear(), month, rule[0], rule[1])) return name;
+        continue;
+      }
+      // 날짜가 정해진 공휴일: 그날, 그리고 주말이면 대신 쉬는 날(토→금, 일→월). 1/1이 토요일이면 전해 12/31
+      for (const year of [date.getFullYear(), date.getFullYear() + 1]) {
+        const day = new Date(year, month - 1, rule);
+        if (sameDay(day, date)) return name;
+        const shift = day.getDay() === 6 ? -1 : day.getDay() === 0 ? 1 : 0;
+        if (shift && sameDay(addDays(day, shift), date)) return [`${name[0]} 대체휴일`, `${name[1]} (observed)`];
+      }
+    }
+    return null;
+  }
+  function holidayFor(date) {
+    return region === 'US' ? usHoliday(date) : koreanHoliday(date);
+  }
+  const pick = (pair) => (pair ? pair[lang === 'ko' ? 0 : 1] : '');
+
+  // =====================================================================
+  // 3. 기념일 · D-day (이 브라우저에만 저장)
+  // =====================================================================
+  const DATES_KEY = 'start-page-dates';
+  const MAX_DATES = 20;
+
+  // 이름: 글자 방향을 뒤집는 특수문자·제어문자를 빼고 20자까지 (이모지가 반으로 잘리지 않게 글자 단위로 자름)
+  function cleanName(text) {
+    return Array.from(String(text || '').replace(/[\u0000-\u001F\u061C\u200B-\u200F\u2028-\u202E\u2066-\u2069\uFEFF]/g, '').trim()).slice(0, 20).join('');
+  }
+  function cleanDate(item) {
+    if (!item || typeof item !== 'object') return null;
+    const name = cleanName(item.name);
+    const repeat = item.repeat === true;
+    const cal = item.cal === 'lunar' && repeat ? 'lunar' : 'solar';
+    const m = Number(item.m);
+    const d = Number(item.d);
+    if (!name || !Number.isInteger(m) || !Number.isInteger(d) || m < 1 || m > 12 || d < 1) return null;
+    if (cal === 'lunar') return d <= 30 ? { name, repeat, cal, m, d } : null;
+    if (repeat) return d <= new Date(2024, m, 0).getDate() ? { name, repeat, cal, m, d } : null; // 2024는 윤년이라 2/29도 허용
+    const y = Number(item.y);
+    if (!Number.isInteger(y) || y < 1900 || y > 9999) return null;
+    const real = new Date(y, m - 1, d);
+    return real.getMonth() === m - 1 ? { name, repeat, cal, m, d, y } : null;
+  }
+  function loadDates() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DATES_KEY));
+      if (Array.isArray(saved)) return saved.slice(0, MAX_DATES).map(cleanDate).filter(Boolean);
+    } catch {}
+    return [];
+  }
+  let dates = loadDates();
+  function saveDates(next) {
+    try {
+      localStorage.setItem(DATES_KEY, JSON.stringify(next));
+    } catch {
+      return false;
+    }
+    dates = next;
+    return true;
+  }
+  function daysUntil(item, today) {
+    return Math.round((Date.UTC(item.y, item.m - 1, item.d) - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
+  }
+  // 지난 D-day는 다음 날 자동으로 지움
+  function prunePastDdays(today) {
+    const next = dates.filter(item => item.repeat || daysUntil(item, today) >= 0);
+    if (next.length !== dates.length) saveDates(next);
+  }
+  function isLeapYear(y) {
+    return new Date(y, 1, 29).getMonth() === 1;
+  }
+  // 오늘의 기념일: 음력 30일이 없는 달은 29일에, 양력 2/29는 평년이면 2/28에, 윤달 기념일은 평달에
+  function anniversariesOn(date) {
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    const lunar = lunarInfo(date);
+    const tomorrow = lunarInfo(addDays(date, 1));
+    return dates.filter(item => item.repeat).filter(item => {
+      if (item.cal === 'solar') {
+        return (item.m === m && item.d === d) || (item.m === 2 && item.d === 29 && m === 2 && d === 28 && !isLeapYear(date.getFullYear()));
+      }
+      if (lunar.leap || lunar.month !== item.m) return false;
+      return lunar.day === item.d || (item.d === 30 && lunar.day === 29 && tomorrow.day === 1);
+    }).map(item => item.name);
+  }
+  // 가장 가까운 D-day 하나 (날짜가 같으면 먼저 등록한 것)
+  function nearestDday(date) {
+    let best = null;
+    for (const item of dates) {
+      if (item.repeat) continue;
+      const n = daysUntil(item, date);
+      if (n >= 0 && (!best || n < best.n)) best = { n, name: item.name };
+    }
+    return best;
+  }
+
+  // =====================================================================
+  // 4. 일력 종이
+  // =====================================================================
+  const calendar = document.getElementById('calendar');
+  const sheet = document.getElementById('sheet');
+  let shownDay = '';
 
   function dayOfYear(date) {
     const start = Date.UTC(date.getFullYear(), 0, 1);
@@ -598,27 +1161,51 @@
   }
 
   function fillSheet(el, date) {
+    const y = date.getFullYear();
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
     const week = date.getDay();
-    const holiday = holidayName(date);
+    const holiday = pick(holidayFor(date));
+    const lunar = lunarInfo(date);
+    const lunarLine = region === 'KR' && lunar.month ? t('lunarLine', lunar.month, lunar.day, lunar.leap) : '';
+    const annivs = anniversariesOn(date);
+    const dday = nearestDday(date);
     el.classList.toggle('is-sun', week === 0 || holiday !== '');
     el.classList.toggle('is-sat', week === 6 && holiday === '');
-    el.querySelector('.ym').textContent = `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
-    el.querySelector('.lunar').textContent = lunarText(date);
-    el.querySelector('.num').textContent = date.getDate();
-    el.querySelector('.dow').textContent = WEEKDAYS[week];
+    el.querySelector('.ym').textContent = t('yearMonth', y, m);
+    el.querySelector('.lunar').textContent = lunarLine;
+    el.querySelector('.num').textContent = d;
+    el.querySelector('.dow').textContent = WEEKDAYS[lang][week];
     el.querySelector('.holiday').textContent = holiday;
-    el.querySelector('.doy').textContent = `올해 ${dayOfYear(date)}번째 날`;
-    if (el === sheet) document.title = `${date.getMonth() + 1}월 ${date.getDate()}일 ${WEEKDAYS[week]} · 데이플립`;
+    el.querySelector('.anniv').textContent = annivs.join(' · ');
+    const ddayBox = el.querySelector('.dday');
+    ddayBox.replaceChildren();
+    if (dday) {
+      const chip = document.createElement('span');
+      chip.className = 'dday-chip';
+      const count = document.createElement('b');
+      count.textContent = t('ddayChip', dday.n);
+      chip.append(count, document.createTextNode(dday.name));
+      ddayBox.append(chip);
+    }
+    el.querySelector('.doy').textContent = t('dayOfYear', dayOfYear(date), y);
+    if (el !== sheet) return;
+    document.title = t('tabTitle', m, d, week);
+    const parts = [t('sentenceDate', y, m, d, week), lunarLine, holiday, ...annivs];
+    if (dday) parts.push(`${dday.name} ${t('ddayChip', dday.n)}`);
+    el.querySelector('.sheet-sentence').textContent = parts.filter(Boolean).join(', ');
   }
 
   // 날짜가 바뀌면 어제 종이를 찢어 떨어뜨립니다 (fromDate를 주면 그날 종이를 찢음)
+  const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   function tearOff(fromDate) {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (reduceMotion() || calendar.classList.contains('is-back')) return;
     const torn = sheet.cloneNode(true);
     torn.removeAttribute('id');
     if (fromDate) fillSheet(torn, fromDate);
     torn.classList.add('torn');
     torn.setAttribute('aria-hidden', 'true');
+    torn.querySelectorAll('a, button').forEach(node => node.setAttribute('tabindex', '-1'));
     sheet.after(torn);
     torn.animate([
       { transform: 'none', opacity: 1 },
@@ -627,14 +1214,51 @@
     ], { duration: 1100, easing: 'cubic-bezier(.5, 0, .75, .4)' }).onfinish = () => torn.remove();
   }
 
-  // ---- 오늘의 메모: 이 브라우저(localStorage)에만 저장, 날짜가 바뀌면 지워짐 ----
-  const MEMO_KEY = 'start-page-memo';
-
-  function showHintError(message) {
-    hint.textContent = message;
-    hint.classList.add('is-error');
+  // =====================================================================
+  // 5. 상태 줄 + 되돌리기 (자주 가는 곳, 기념일에서 같이 씀)
+  //    상태 줄은 늘 페이지에 있어서(비어 있을 뿐) 화면 읽기 프로그램이 새 글을 읽어 줌
+  // =====================================================================
+  function makeStatus(line, fallbackFocus) {
+    const text = line.querySelector('span');
+    const button = line.querySelector('button');
+    let timer = 0;
+    let undoAction = null;
+    function hide() {
+      if (line.contains(document.activeElement)) fallbackFocus().focus();
+      text.textContent = '';
+      button.hidden = true;
+      line.classList.remove('is-shown');
+      undoAction = null;
+    }
+    function show(message, onUndo = null) {
+      text.textContent = message;
+      undoAction = onUndo;
+      button.hidden = !onUndo;
+      line.classList.add('is-shown');
+      clearTimeout(timer);
+      timer = setTimeout(hide, 20000);
+    }
+    button.addEventListener('click', () => {
+      const action = undoAction;
+      if (action) action();
+    });
+    return { show, hide };
   }
 
+  // =====================================================================
+  // 6. 오늘의 메모: 이 브라우저(localStorage)에만 저장, 날짜가 바뀌면 지워짐
+  // =====================================================================
+  const MEMO_KEY = 'start-page-memo';
+  const memo = document.getElementById('memo');
+  const hint = document.getElementById('memo-hint');
+  const memoCount = document.getElementById('memo-count');
+  let memoError = '';
+  let clearMemoOnBlur = false;
+
+  function showHint() {
+    hint.textContent = memoError ? t(memoError) : t('memoHint');
+    hint.classList.toggle('is-error', memoError !== '');
+  }
   function loadMemo(day) {
     const raw = localStorage.getItem(MEMO_KEY);
     if (!raw) return '';
@@ -650,25 +1274,20 @@
     }
     return raw;
   }
-
   function saveMemo() {
     try {
       localStorage.setItem(MEMO_KEY, JSON.stringify({ day: shownDay, text: memo.value }));
     } catch {
-      showHintError('메모를 저장하지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.');
+      memoError = 'memoSaveFail';
+      showHint();
     }
   }
-
-  const memoCount = document.getElementById('memo-count');
-  let clearMemoOnBlur = false;
-
   // 50자를 넘으면 남은 글자 수를 보여 줌
   function updateMemoCount() {
     const length = memo.value.length;
     memoCount.textContent = length > 50 ? `${length}/${memo.maxLength}` : '';
     memoCount.classList.toggle('is-full', length >= memo.maxLength);
   }
-
   memo.addEventListener('input', () => {
     saveMemo();
     updateMemoCount();
@@ -681,59 +1300,384 @@
     try { localStorage.removeItem(MEMO_KEY); } catch {}
     updateMemoCount();
   });
-  // 다른 탭에서 메모를 고치면 이 탭에도 반영 (서로 덮어쓰지 않게)
-  addEventListener('storage', (event) => {
-    if (event.key !== MEMO_KEY && event.key !== null) return;
-    try { memo.value = loadMemo(shownDay); } catch {}
-    updateMemoCount();
+
+  // =====================================================================
+  // 7. 날씨 (Open-Meteo, 키 없이 쓰는 무료 서비스. 도시의 위도·경도만 보냄)
+  // =====================================================================
+  const CITY_KEY = 'start-page-city';
+  const WEATHER_KEY = 'start-page-weather';
+  const FRESH_MS = 30 * 60 * 1000;   // 30분마다 새로
+  const KEEP_MS = 3 * 60 * 60 * 1000; // 연결이 안 되면 3시간까지는 저장본으로
+  const weatherSlot = sheet.querySelector('.weather-slot');
+
+  function readJson(key) {
+    try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
+  }
+  function cleanCity(city) {
+    if (!city || typeof city !== 'object') return null;
+    const { id, lat, lon } = city;
+    if (!Number.isInteger(id) || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+    const names = {};
+    for (const code of ['ko', 'en']) {
+      if (city.names && typeof city.names[code] === 'string') names[code] = cleanName(city.names[code]);
+    }
+    return { id, lat, lon, names };
+  }
+  let city = cleanCity(readJson(CITY_KEY));
+  const getJson = async (url) => {
+    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) throw new Error('bad response');
+    return response.json();
+  };
+  let weatherBusy = false;
+
+  function saveCity(next) {
+    city = next;
+    try {
+      if (next) localStorage.setItem(CITY_KEY, JSON.stringify(next));
+      else localStorage.removeItem(CITY_KEY);
+      localStorage.removeItem(WEATHER_KEY);
+    } catch {}
+  }
+  function cityName() {
+    return city ? city.names[lang] || city.names.ko || city.names.en || '' : '';
+  }
+  // 고른 도시 이름을 다른 언어로도 받아 둠 (도시 번호로 한 번만)
+  async function fetchCityName(code) {
+    if (!city || city.names[code]) return;
+    const id = city.id;
+    try {
+      const data = await getJson(`https://geocoding-api.open-meteo.com/v1/get?id=${id}&language=${code}`);
+      if (!city || city.id !== id || typeof data.name !== 'string') return;
+      saveCityName(code, data.name);
+    } catch {}
+  }
+  function saveCityName(code, name) {
+    city = { ...city, names: { ...city.names, [code]: cleanName(name) } };
+    try { localStorage.setItem(CITY_KEY, JSON.stringify(city)); } catch {}
+    renderWeather();
+    renderCityNote();
+  }
+
+  function renderWeather() {
+    weatherSlot.replaceChildren();
+    if (!city) {
+      const setup = document.createElement('button');
+      setup.type = 'button';
+      setup.className = 'text-button weather-setup';
+      setup.textContent = t('showWeather');
+      setup.addEventListener('click', () => openSettings('city-input'));
+      weatherSlot.append(setup);
+      return;
+    }
+    const saved = readJson(WEATHER_KEY);
+    const fresh = saved && saved.cityId === city.id && Date.now() - saved.at < KEEP_MS && Number.isFinite(saved.temp) && Math.abs(saved.temp) < 100;
+    if (!fresh) return; // 날씨가 없으면 조용히 비워 둠
+    const celsius = Math.round(saved.temp);
+    const fahrenheit = Math.round(saved.temp * 9 / 5 + 32);
+    const [main, sub] = region === 'US' ? [`${fahrenheit}°F`, `${celsius}°C`] : [`${celsius}°C`, `${fahrenheit}°F`];
+    const words = t('weatherWords');
+    const word = Object.hasOwn(words, saved.code) ? words[saved.code] : '';
+    const link = document.createElement('a');
+    link.className = 'weather';
+    link.href = 'https://open-meteo.com/';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.title = t('weatherTitle');
+    const place = document.createElement('span');
+    place.className = 'wx-place';
+    place.textContent = [cityName(), word].filter(Boolean).join(' · ');
+    const big = document.createElement('span');
+    big.className = 'wx-main';
+    big.textContent = main;
+    const small = document.createElement('span');
+    small.className = 'wx-sub';
+    small.textContent = sub;
+    link.append(place, big, small);
+    weatherSlot.append(link);
+  }
+
+  async function refreshWeather() {
+    if (!city) return renderWeather();
+    const saved = readJson(WEATHER_KEY);
+    const isFresh = saved && saved.cityId === city.id && Date.now() - saved.at < FRESH_MS;
+    if (isFresh || document.hidden || weatherBusy) return renderWeather();
+    weatherBusy = true;
+    const asked = city;
+    try {
+      const data = await getJson(`https://api.open-meteo.com/v1/forecast?latitude=${asked.lat}&longitude=${asked.lon}&current=temperature_2m,weather_code&timezone=auto`);
+      const temp = Number(data?.current?.temperature_2m);
+      const code = Number(data?.current?.weather_code);
+      if (city && city.id === asked.id && Number.isFinite(temp) && Math.abs(temp) < 100) {
+        try { localStorage.setItem(WEATHER_KEY, JSON.stringify({ cityId: asked.id, at: Date.now(), temp, code })); } catch {}
+      }
+    } catch {
+      // 연결이 안 되면 저장본(3시간 이내)을 쓰고, 없으면 조용히 비움
+    } finally {
+      weatherBusy = false;
+    }
+    if (city && city.id !== asked.id) return refreshWeather();
+    renderWeather();
+    fetchCityName(lang);
+  }
+
+  // =====================================================================
+  // 8. 설정 (일력 종이 뒷면)
+  // =====================================================================
+  const back = document.getElementById('sheet-back');
+  const settingsOpen = document.getElementById('settings-open');
+  const settingsDone = document.getElementById('settings-done');
+
+  let turning = false; // 뒤집는 중에 또 누르면 무시
+  async function turn(from, to) {
+    turning = true;
+    const swap = () => {
+      calendar.classList.toggle('is-back', to === back);
+      back.hidden = to !== back;
+    };
+    try {
+      if (reduceMotion()) return swap();
+      await from.animate([{ transform: 'perspective(1800px) rotateY(0deg)' }, { transform: 'perspective(1800px) rotateY(90deg)' }], { duration: 170, easing: 'cubic-bezier(.5, 0, 1, 1)' }).finished;
+      swap();
+      await to.animate([{ transform: 'perspective(1800px) rotateY(-90deg)' }, { transform: 'perspective(1800px) rotateY(0deg)' }], { duration: 220, easing: 'cubic-bezier(0, 0, .3, 1)' }).finished;
+    } finally {
+      turning = false;
+    }
+  }
+  async function openSettings(focusId) {
+    if (turning) return;
+    if (!back.hidden) return document.getElementById(focusId || 'settings-title').focus();
+    renderSettings();
+    settingsOpen.setAttribute('aria-expanded', 'true');
+    settingsOpen.hidden = true;
+    await turn(sheet, back);
+    document.getElementById(focusId || 'settings-title').focus();
+  }
+  async function closeSettings() {
+    if (back.hidden || turning) return;
+    datesStatus.hide();
+    await turn(back, sheet);
+    settingsOpen.hidden = false;
+    settingsOpen.setAttribute('aria-expanded', 'false');
+    settingsOpen.focus();
+  }
+  settingsOpen.addEventListener('click', () => openSettings());
+  settingsDone.addEventListener('click', closeSettings);
+
+  function renderSettings() {
+    back.querySelectorAll('[data-lang]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.lang === lang)));
+    back.querySelectorAll('[data-region]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.region === region)));
+    renderCityNote();
+    renderDates();
+    fillLunarOptions();
+  }
+
+  back.querySelectorAll('[data-lang]').forEach(button => button.addEventListener('click', () => {
+    lang = button.dataset.lang;
+    saveChoice(LANG_KEY, lang);
+    applyLanguage();
+  }));
+  back.querySelectorAll('[data-region]').forEach(button => button.addEventListener('click', () => {
+    region = button.dataset.region;
+    saveChoice(REGION_KEY, region);
+    renderSettings();
+    fillSheet(sheet, new Date());
+    renderWeather();
+  }));
+
+  // ---- 날씨 도시 찾기 ----
+  const cityForm = document.getElementById('city-form');
+  const cityInput = document.getElementById('city-input');
+  const cityCands = document.getElementById('city-cands');
+  const cityError = document.getElementById('city-error');
+  const cityCurrent = document.getElementById('city-current');
+
+  function renderCityNote() {
+    cityCurrent.replaceChildren();
+    if (!city) {
+      cityCurrent.textContent = t('cityNone');
+      return;
+    }
+    cityCurrent.append(t('cityCurrent', cityName()), ' ');
+    const off = document.createElement('button');
+    off.type = 'button';
+    off.className = 'text-button';
+    off.textContent = t('cityOff');
+    off.addEventListener('click', () => {
+      saveCity(null);
+      renderCityNote();
+      renderWeather();
+      cityInput.focus();
+    });
+    cityCurrent.append(off);
+  }
+  function showCityError(key) {
+    cityError.textContent = key ? t(key) : '';
+    cityInput.setAttribute('aria-invalid', String(Boolean(key)));
+  }
+  let citySearchId = 0;
+  cityForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const query = cityInput.value.trim();
+    const searchId = ++citySearchId;
+    cityCands.replaceChildren();
+    if (Array.from(query).length < 2) return showCityError('cityTooShort');
+    showCityError('');
+    try {
+      const data = await getJson(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=${lang}&format=json`);
+      const results = Array.isArray(data.results) ? data.results : [];
+      if (searchId !== citySearchId) return;
+      if (!results.length) return showCityError('cityNotFound');
+      for (const place of results) {
+        const candidate = cleanCity({ id: place.id, lat: place.latitude, lon: place.longitude, names: { [lang]: place.name } });
+        if (!candidate) continue;
+        const li = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        const name = document.createElement('span');
+        name.textContent = candidate.names[lang];
+        const where = document.createElement('small');
+        where.textContent = [place.admin1, place.country].filter(value => typeof value === 'string' && value !== place.name).map(cleanName).filter(Boolean).join(' · ');
+        button.append(name, where);
+        button.addEventListener('click', () => {
+          saveCity(candidate);
+          cityCands.replaceChildren();
+          cityInput.value = '';
+          renderCityNote();
+          refreshWeather();
+          cityCurrent.querySelector('button')?.focus();
+        });
+        li.append(button);
+        cityCands.append(li);
+      }
+      cityCands.querySelector('button')?.focus();
+    } catch {
+      showCityError('cityOffline');
+    }
   });
 
-  const LAST_DAY_KEY = 'start-page-last-day';
-  function rememberDay() {
-    try { localStorage.setItem(LAST_DAY_KEY, shownDay); } catch {}
-  }
+  // ---- 기념일 · D-day 목록과 추가 칸 ----
+  const datesList = document.getElementById('dates-list');
+  const dateForm = document.getElementById('date-form');
+  const dateError = document.getElementById('date-error');
+  const lunarPick = dateForm.querySelector('.lunar-pick');
+  const datesStatus = makeStatus(document.getElementById('dates-status'), () => dateForm.elements.name);
+  let dateCal = 'solar';
+  let repeatBeforeLunar = true;
 
-  function tick() {
-    const now = new Date();
-    const key = now.toDateString();
-    if (key !== shownDay) {
-      if (shownDay) tearOff();
-      fillSheet(sheet, now);
-      shownDay = key;
-      rememberDay();
-      if (document.activeElement === memo && document.hasFocus()) {
-        clearMemoOnBlur = true; // 쓰는 중에는 지우지 않음
-      } else {
-        try {
-          memo.value = loadMemo(key);
-        } catch {
-          memo.value = '';
-          showHintError('이 브라우저에서는 메모를 저장할 수 없어요.');
-        }
-        updateMemoCount();
-      }
+  function describeDate(item, today) {
+    if (item.repeat) return item.cal === 'lunar' ? t('dateAnnivLunar', item.m, item.d) : t('dateAnnivSolar', item.m, item.d);
+    return t('dateDday', item.y, item.m, item.d, daysUntil(item, today));
+  }
+  function renderDates() {
+    const today = new Date();
+    const rows = dates.map((item, index) => {
+      const li = document.createElement('li');
+      const name = document.createElement('span');
+      name.className = 'date-name';
+      name.textContent = item.name;
+      const when = document.createElement('span');
+      when.className = 'date-when';
+      when.textContent = describeDate(item, today);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'text-button is-danger';
+      remove.textContent = t('delete');
+      remove.setAttribute('aria-label', t('deleteDate', item.name));
+      remove.addEventListener('click', () => removeDate(index));
+      li.append(name, when, remove);
+      return li;
+    });
+    if (!rows.length) {
+      const empty = document.createElement('li');
+      empty.className = 'dates-empty';
+      empty.textContent = t('datesEmpty');
+      rows.push(empty);
     }
-    const clock = sheet.querySelector('.clock');
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    clock.textContent = `${hh}:${mm}`;
-    clock.dateTime = `${hh}:${mm}`;
+    datesList.replaceChildren(...rows);
   }
-
-  // 그날 처음 열면 지난번 종이를 한 장 찢어 보여 줌 (자정에 탭이 열려 있지 않아도 매일 보이게)
-  let lastSeenDay = null;
-  try { lastSeenDay = localStorage.getItem(LAST_DAY_KEY); } catch {}
-  tick();
-  if (lastSeenDay && lastSeenDay !== shownDay && /^\w{3} \w{3} \d{2} \d{4}$/.test(lastSeenDay)) {
-    setTimeout(() => tearOff(new Date(lastSeenDay)), 500);
+  function removeDate(index) {
+    const previous = dates;
+    const removed = dates[index];
+    if (!saveDates(dates.filter((_, i) => i !== index))) return datesStatus.show(t('errStorage'));
+    renderDates();
+    fillSheet(sheet, new Date());
+    const rest = datesList.querySelectorAll('.is-danger');
+    (rest[Math.min(index, rest.length - 1)] || dateForm.elements.name).focus();
+    datesStatus.show(t('removed', removed.name), () => {
+      if (!saveDates(previous)) return datesStatus.show(t('undoFail'));
+      datesStatus.hide();
+      renderDates();
+      fillSheet(sheet, new Date());
+      dateForm.elements.name.focus();
+    });
   }
-  setInterval(tick, 1000);
-  document.addEventListener('visibilitychange', tick); // 밤새 열어 둔 탭으로 돌아오면 바로 날짜부터 맞춤
+  function fillLunarOptions() {
+    const fill = (select, count, label) => {
+      const current = select.value;
+      select.replaceChildren(...Array.from({ length: count }, (_, i) => {
+        const option = document.createElement('option');
+        option.value = String(i + 1);
+        option.textContent = t(label, i + 1);
+        return option;
+      }));
+      select.value = current || '1';
+    };
+    fill(dateForm.elements.lunarMonth, 12, 'lunarMonthOption');
+    fill(dateForm.elements.lunarDay, 30, 'lunarDayOption');
+  }
+  // 음력이면 월·일 고르기, 해마다 반복만 가능 / 양력이면 날짜 고르기
+  function setDateCal(cal) {
+    dateCal = cal;
+    dateForm.querySelectorAll('[data-cal]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.cal === cal)));
+    const lunar = cal === 'lunar';
+    dateForm.elements.date.hidden = lunar;
+    lunarPick.hidden = !lunar;
+    const repeat = dateForm.elements.repeat;
+    if (lunar && !repeat.disabled) repeatBeforeLunar = repeat.checked;
+    if (!lunar && repeat.disabled) repeat.checked = repeatBeforeLunar;
+    if (lunar) repeat.checked = true;
+    repeat.disabled = lunar;
+  }
+  dateForm.querySelectorAll('[data-cal]').forEach(button => button.addEventListener('click', () => setDateCal(button.dataset.cal)));
+  function showDateError(key, ...args) {
+    dateError.textContent = key ? t(key, ...args) : '';
+  }
+  dateForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const fields = dateForm.elements;
+    const name = cleanName(fields.name.value);
+    if (!name) {
+      showDateError('errDateName');
+      return fields.name.focus();
+    }
+    if (dates.length >= MAX_DATES) return showDateError('errDatesMax', MAX_DATES);
+    let item;
+    if (dateCal === 'lunar') {
+      item = cleanDate({ name, repeat: true, cal: 'lunar', m: fields.lunarMonth.value, d: fields.lunarDay.value });
+    } else {
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fields.date.value);
+      if (!match) {
+        showDateError('errDateValue');
+        return fields.date.focus();
+      }
+      item = cleanDate({ name, repeat: fields.repeat.checked, cal: 'solar', y: match[1], m: match[2], d: match[3] });
+      if (item && !item.repeat && daysUntil(item, new Date()) < 0) return showDateError('errDdayPast');
+    }
+    if (!item) return showDateError('errDateValue');
+    if (!saveDates([...dates, item])) return showDateError('errStorage');
+    showDateError('');
+    datesStatus.hide();
+    fields.name.value = '';
+    fields.date.value = '';
+    renderDates();
+    fillSheet(sheet, new Date());
+    fields.name.focus();
+  });
 
-  // 검색 결과가 새 탭에서 열리면, 이 탭의 검색창은 비워서 다음 검색을 준비
-  search.form.addEventListener('submit', () => setTimeout(() => search.form.reset()));
-
-  // ---- 자주 가는 곳 ----
+  // =====================================================================
+  // 9. 자주 가는 곳
+  // =====================================================================
   // 기본 목록: 처음 열었을 때 보이는 사이트. 페이지의 '편집'으로 고치면 이 브라우저에 따로 저장되고,
   // 그때부터는 저장된 목록이 먼저예요. (숫자 키 1~9 때문에 9개까지)
   // 페이지에서 고친 뒤 이 기본 목록으로 돌아가려면: 페이지의 '편집' → '기본 목록으로' (메모는 그대로 남아요)
@@ -752,6 +1696,7 @@
   const resetButton = document.getElementById('links-reset');
   const linkForm = document.getElementById('link-form');
   const formError = linkForm.querySelector('.form-error');
+  const linksStatus = makeStatus(document.getElementById('links-status'), () => editButton);
   let links = loadLinks();
   let editing = false;
   let editingIndex = -1; // -1 = 새로 추가
@@ -771,18 +1716,11 @@
       return null;
     }
   }
-
-  // 이름: 글자 방향을 뒤집는 특수문자·제어문자를 빼고 20자까지 (이모지가 반으로 잘리지 않게 글자 단위로 자름)
-  function cleanName(text) {
-    return Array.from(String(text || '').replace(/[\u0000-\u001F\u202A-\u202E\u2066-\u2069]/g, '').trim()).slice(0, 20).join('');
-  }
-
   function cleanLink(item) {
     if (!item || typeof item !== 'object') return null;
     const url = normalizeUrl(item.url);
     return url ? { name: cleanName(item.name) || shortHost(url), url } : null;
   }
-
   function loadLinks() {
     try {
       const saved = JSON.parse(localStorage.getItem(LINKS_KEY));
@@ -792,22 +1730,25 @@
     }
     return DEFAULTS;
   }
-
   function saveLinks(next) {
     try {
       localStorage.setItem(LINKS_KEY, JSON.stringify(next));
     } catch {
-      showFormError('저장하지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.');
       return false;
     }
     links = next;
     return true;
   }
-
+  function hasSavedLinks() {
+    try {
+      return localStorage.getItem(LINKS_KEY) !== null;
+    } catch {
+      return false;
+    }
+  }
   function shortHost(url) {
     return new URL(url).hostname.replace(/^www\./, '');
   }
-
   function monogram(link) {
     const letter = document.createElement('span');
     letter.className = 'monogram';
@@ -835,13 +1776,57 @@
     return icon;
   }
 
+  // 앞으로(◀) · 뒤로(▶) 버튼 그림: 직접 그린 작은 꺾쇠
+  function chevron(direction) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 14 14');
+    svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', direction < 0 ? 'M9 2.5 4.5 7 9 11.5' : 'M5 2.5 9.5 7 5 11.5');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    svg.append(path);
+    return svg;
+  }
+  function moveButtons(link, index) {
+    const group = document.createElement('div');
+    group.className = 'move';
+    for (const step of [-1, 1]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.step = String(step);
+      button.setAttribute('aria-label', t(step < 0 ? 'moveEarlier' : 'moveLater', link.name));
+      button.disabled = (step < 0 && index === 0) || (step > 0 && index === links.length - 1);
+      button.append(chevron(step));
+      button.addEventListener('click', () => moveLink(index, step));
+      group.append(button);
+    }
+    return group;
+  }
+  function moveLink(index, step) {
+    const target = index + step;
+    if (target < 0 || target >= links.length) return;
+    const next = [...links];
+    [next[index], next[target]] = [next[target], next[index]];
+    if (!saveLinks(next)) return linksStatus.show(t('errStorage'));
+    closeForm();
+    renderLinks();
+    // 옮겨 간 카드의 같은 버튼에 포커스 (끝에 닿아 못 누르면 반대쪽 버튼)
+    const group = linksList.querySelectorAll('.move')[target];
+    const same = group?.querySelector(`[data-step="${step}"]`);
+    (same && !same.disabled ? same : group?.querySelector(`[data-step="${-step}"]`))?.focus();
+  }
+
   function linkCard(link, index) {
     const card = document.createElement(editing ? 'button' : 'a');
     card.className = 'paper link-card';
     card.title = link.name; // 이름이 잘려 보일 때 마우스를 올리면 전체 이름
     if (editing) {
       card.type = 'button';
-      card.setAttribute('aria-label', `${link.name} 고치기`);
+      card.setAttribute('aria-label', t('editCard', link.name));
       card.addEventListener('click', () => openForm(index));
     } else {
       card.href = link.url;
@@ -862,11 +1847,11 @@
     card.append(siteIcon(link), label);
     return card;
   }
-
   function renderLinks() {
     const items = links.map((link, index) => {
       const li = document.createElement('li');
       li.append(linkCard(link, index));
+      if (editing) li.append(moveButtons(link, index));
       return li;
     });
     if (editing && links.length < MAX_LINKS) {
@@ -874,7 +1859,7 @@
       const add = document.createElement('button');
       add.type = 'button';
       add.className = 'paper link-card is-add';
-      add.textContent = '사이트 추가';
+      add.textContent = t('addSite');
       add.addEventListener('click', () => openForm(-1));
       li.append(add);
       items.push(li);
@@ -882,67 +1867,21 @@
     if (!items.length) {
       const empty = document.createElement('li');
       empty.className = 'links-empty';
-      empty.textContent = '편집을 눌러 자주 가는 사이트를 추가해 보세요.';
+      empty.textContent = t('linksEmpty');
       items.push(empty);
     }
     linksList.replaceChildren(...items);
     linksList.classList.toggle('is-many', links.length > 4);
     resetButton.hidden = !editing || !hasSavedLinks(); // 되돌릴 게 있을 때만 보임
     linksList.classList.remove('is-adding');
+    editButton.textContent = t(editing ? 'done' : 'edit');
+    document.getElementById('links-note').textContent = t(editing ? 'linksNoteEdit' : 'linksNoteView');
   }
-
-  // ---- 되돌리기: 삭제나 '기본 목록으로' 직후 잠깐 보임 ----
-  const linksStatus = document.getElementById('links-status');
-  const undoButton = linksStatus.querySelector('button');
-  let undoLinks = null;
-  let undoTimer = 0;
-
-  // 상태 줄은 늘 페이지에 있어서(비어 있을 뿐) 화면 읽기 프로그램이 새 글을 읽어 줌
-  function showStatus(message, withUndo = false) {
-    linksStatus.querySelector('span').textContent = message;
-    undoButton.hidden = !withUndo;
-    linksStatus.classList.add('is-shown');
-    clearTimeout(undoTimer);
-    undoTimer = setTimeout(hideUndo, 20000);
-  }
-
-  function offerUndo(message, previous) {
-    undoLinks = previous;
-    showStatus(message, true);
-  }
-
-  function hideUndo() {
-    if (linksStatus.contains(document.activeElement)) editButton.focus();
-    linksStatus.querySelector('span').textContent = '';
-    undoButton.hidden = true;
-    linksStatus.classList.remove('is-shown');
-    undoLinks = null;
-  }
-
-  undoButton.addEventListener('click', () => {
-    if (!undoLinks) return;
-    let restored;
-    if (undoLinks === DEFAULTS) {
-      // 되돌릴 목록이 기본 목록이면 저장하지 않고 지움 (파일의 기본 목록을 계속 따르게)
-      try { localStorage.removeItem(LINKS_KEY); restored = true; } catch { restored = false; }
-      if (restored) links = DEFAULTS;
-    } else {
-      restored = saveLinks(undoLinks);
-    }
-    if (!restored) {
-      showStatus('되돌리지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.');
-      return;
-    }
-    closeForm();
-    hideUndo();
-    renderLinks();
-    editButton.focus();
-  });
 
   function openForm(index) {
     editingIndex = index;
     const link = links[index] || { name: '', url: '' };
-    linkForm.querySelector('#link-form-title').textContent = index < 0 ? '사이트 추가' : '사이트 고치기';
+    linkForm.querySelector('#link-form-title').textContent = t(index < 0 ? 'addSite' : 'editSite');
     linkForm.elements.name.value = link.name;
     linkForm.elements.url.value = link.url;
     linkForm.querySelector('[data-action="delete"]').hidden = index < 0;
@@ -951,21 +1890,17 @@
     // 고치는 카드 표시, 추가할 때는 '사이트 추가' 칸을 숨김
     linksList.querySelectorAll('.link-card').forEach((card, i) => card.classList.toggle('is-editing', i === index));
     linksList.classList.toggle('is-adding', index < 0);
-    linkForm.elements.name.focus();
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    linkForm.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+    linkForm.elements.url.focus();
+    linkForm.scrollIntoView({ block: 'nearest', behavior: reduceMotion() ? 'auto' : 'smooth' });
   }
-
   function showFormError(message) {
     formError.textContent = message;
     linkForm.elements.url.setAttribute('aria-invalid', String(message !== ''));
   }
-
   function closeForm() {
     linkForm.hidden = true;
     showFormError('');
   }
-
   // 저장·삭제·취소 뒤: 칸을 닫고, 키보드 포커스를 고치던 카드(없으면 편집 버튼)로 돌려줌
   function finishForm(focusIndex) {
     closeForm();
@@ -974,52 +1909,50 @@
     const target = focusIndex < 0 ? linksList.querySelector('.is-add') : cards[Math.min(focusIndex, cards.length - 1)];
     (target || editButton).focus();
   }
-
   function setEditing(on) {
     editing = on;
-    editButton.textContent = on ? '완료' : '편집';
-    document.getElementById('links-note').textContent = on ? ' (카드를 누르면 고칠 수 있음)' : ' (모두 새 탭에서 열림)';
     if (!on) {
       closeForm();
-      hideUndo();
+      linksStatus.hide();
     }
     renderLinks();
   }
-
-  function hasSavedLinks() {
-    try {
-      return localStorage.getItem(LINKS_KEY) !== null;
-    } catch {
-      return false;
-    }
-  }
-
   editButton.addEventListener('click', () => setEditing(!editing));
 
+  function restoreLinks(previous) {
+    let restored;
+    if (previous === DEFAULTS) {
+      // 되돌릴 목록이 기본 목록이면 저장하지 않고 지움 (파일의 기본 목록을 계속 따르게)
+      try { localStorage.removeItem(LINKS_KEY); restored = true; } catch { restored = false; }
+      if (restored) links = DEFAULTS;
+    } else {
+      restored = saveLinks(previous);
+    }
+    if (!restored) return linksStatus.show(t('undoFail'));
+    closeForm();
+    linksStatus.hide();
+    renderLinks();
+    editButton.focus();
+  }
   resetButton.addEventListener('click', () => {
     const previous = links;
     try {
-      if (localStorage.getItem(LINKS_KEY) === null) {
-        showStatus('이미 기본 목록이에요.');
-        return;
-      }
+      if (localStorage.getItem(LINKS_KEY) === null) return linksStatus.show(t('alreadyDefault'));
       localStorage.removeItem(LINKS_KEY);
     } catch {
-      showStatus('기본 목록으로 돌리지 못했어요. 브라우저 저장 공간 설정을 확인해 주세요.');
-      return;
+      return linksStatus.show(t('resetFail'));
     }
     links = DEFAULTS;
     closeForm();
     renderLinks();
     editButton.focus(); // 누른 버튼이 사라지니 포커스를 편집 버튼으로
-    offerUndo('기본 목록으로 돌렸어요.', previous);
+    linksStatus.show(t('resetDone'), () => restoreLinks(previous));
   });
-
   linkForm.addEventListener('submit', (event) => {
     event.preventDefault();
     const url = normalizeUrl(linkForm.elements.url.value);
     if (!url) {
-      showFormError(linkForm.elements.url.value.trim() ? '주소를 확인해 주세요. 예: naver.com' : '주소를 넣어 주세요.');
+      showFormError(t(linkForm.elements.url.value.trim() ? 'errUrlBad' : 'errUrlEmpty'));
       linkForm.elements.url.focus();
       return;
     }
@@ -1028,59 +1961,169 @@
     const next = editingIndex < 0
       ? [...links, item]
       : links.map((link, index) => (index === editingIndex ? item : link));
-    if (next.length > MAX_LINKS) {
-      showFormError(`사이트는 ${MAX_LINKS}개까지 넣을 수 있어요.`);
-      return;
-    }
-    if (!saveLinks(next)) return;
+    if (next.length > MAX_LINKS) return showFormError(t('errLinksMax', MAX_LINKS));
+    if (!saveLinks(next)) return showFormError(t('errStorage'));
+    linksStatus.hide();
     finishForm(editingIndex < 0 ? next.length - 1 : editingIndex);
   });
-
   linkForm.querySelector('[data-action="cancel"]').addEventListener('click', () => finishForm(editingIndex));
-
   linkForm.querySelector('[data-action="delete"]').addEventListener('click', () => {
     const previous = links;
     const removed = links[editingIndex];
-    if (!saveLinks(links.filter((_, index) => index !== editingIndex))) return;
+    if (!saveLinks(links.filter((_, index) => index !== editingIndex))) return showFormError(t('errStorage'));
     finishForm(editingIndex);
-    offerUndo(`'${removed.name}'을(를) 지웠어요.`, previous);
+    linksStatus.show(t('removed', removed.name), () => restoreLinks(previous));
   });
 
-  // 다른 탭에서 목록을 고치면 이 탭에도 반영
-  addEventListener('storage', (event) => {
-    if (event.key !== LINKS_KEY && event.key !== null) return;
-    links = loadLinks();
-    closeForm(); // 고치던 칸의 위치가 바뀌었을 수 있으니 닫음
-    hideUndo();  // 다른 탭의 새 목록을 옛 목록으로 덮어쓰지 않게
+  // =====================================================================
+  // 10. 언어 적용: 화면의 모든 글자를 지금 언어로
+  // =====================================================================
+  const search = document.querySelector('.search input');
+  function applyLanguage() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
+    document.querySelectorAll('[data-t-placeholder]').forEach(el => { el.placeholder = t(el.dataset.tPlaceholder); });
+    document.querySelectorAll('[data-t-label]').forEach(el => el.setAttribute('aria-label', t(el.dataset.tLabel)));
+    // 단축키 안내: [키, 글, 키, 글, ...] 순서
+    const keyHint = document.getElementById('key-hint');
+    keyHint.replaceChildren(...t('keyHint').map((piece, i) => {
+      if (i % 2) return document.createTextNode(piece);
+      const kbd = document.createElement('kbd');
+      kbd.textContent = piece;
+      return kbd;
+    }));
+    showHint();
     renderLinks();
+    if (!linkForm.hidden) linkForm.querySelector('#link-form-title').textContent = t(editingIndex < 0 ? 'addSite' : 'editSite');
+    if (shownDay) fillSheet(sheet, new Date());
+    renderWeather();
+    fetchCityName(lang);
+    linksStatus.hide();
+    datesStatus.hide();
+    showCityError('');
+    showDateError('');
+    if (!linkForm.hidden) showFormError('');
+    cityCands.replaceChildren();
+    if (!back.hidden) renderSettings();
+  }
+
+  // =====================================================================
+  // 11. 시계와 날짜 바뀜
+  // =====================================================================
+  const LAST_DAY_KEY = 'start-page-last-day';
+  function rememberDay() {
+    try { localStorage.setItem(LAST_DAY_KEY, shownDay); } catch {}
+  }
+  function tick() {
+    const now = new Date();
+    const key = now.toDateString();
+    if (key !== shownDay) {
+      if (shownDay) tearOff();
+      prunePastDdays(now);
+      fillSheet(sheet, now);
+      shownDay = key;
+      rememberDay();
+      if (!back.hidden) renderDates();
+      if (document.activeElement === memo && document.hasFocus()) {
+        clearMemoOnBlur = true; // 쓰는 중에는 지우지 않음
+      } else {
+        try {
+          memo.value = loadMemo(key);
+        } catch {
+          memo.value = '';
+          memoError = 'memoNoStorage';
+          showHint();
+        }
+        updateMemoCount();
+      }
+    }
+    const clock = sheet.querySelector('.clock');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    clock.textContent = `${hh}:${mm}`;
+    clock.dateTime = `${hh}:${mm}`;
+  }
+
+  // 다른 탭에서 바꾸면 이 탭에도 반영 (서로 덮어쓰지 않게)
+  addEventListener('storage', (event) => {
+    const key = event.key;
+    if (key === MEMO_KEY || key === null) {
+      try { memo.value = loadMemo(shownDay); } catch {}
+      updateMemoCount();
+    }
+    if (key === LINKS_KEY || key === null) {
+      links = loadLinks();
+      closeForm(); // 고치던 칸의 위치가 바뀌었을 수 있으니 닫음
+      linksStatus.hide(); // 다른 탭의 새 목록을 옛 목록으로 덮어쓰지 않게
+      renderLinks();
+    }
+    if (key === DATES_KEY || key === null) {
+      dates = loadDates();
+      datesStatus.hide();
+      if (!back.hidden) renderDates();
+      fillSheet(sheet, new Date());
+    }
+    if (key === CITY_KEY || key === null) {
+      city = cleanCity(readJson(CITY_KEY));
+      if (!back.hidden) renderCityNote();
+      refreshWeather();
+    }
+    if (key === WEATHER_KEY) renderWeather();
+    if (key === LANG_KEY || key === REGION_KEY || key === null) {
+      lang = loadChoice(LANG_KEY, ['ko', 'en'], lang);
+      region = loadChoice(REGION_KEY, ['KR', 'US'], region);
+      applyLanguage();
+    }
   });
 
-  renderLinks();
+  // 처음 그리기
+  applyLanguage();
+  // 그날 처음 열면 지난번 종이를 한 장 찢어 보여 줌 (자정에 탭이 열려 있지 않아도 매일 보이게)
+  let lastSeenDay = null;
+  try { lastSeenDay = localStorage.getItem(LAST_DAY_KEY); } catch {}
+  try {
+    tick();
+  } catch {
+    memoError = 'memoNoStorage';
+    showHint();
+  }
+  if (lastSeenDay && lastSeenDay !== shownDay && /^\w{3} \w{3} \d{2} \d{4}$/.test(lastSeenDay)) {
+    setTimeout(() => tearOff(new Date(lastSeenDay)), 500);
+  }
+  setInterval(tick, 1000);
+  refreshWeather();
+  setInterval(refreshWeather, 5 * 60 * 1000); // 5분마다 확인 (30분이 지났을 때만 새로 받음)
+  document.addEventListener('visibilitychange', () => { // 밤새 열어 둔 탭으로 돌아오면 바로 날짜·날씨부터 맞춤
+    tick();
+    refreshWeather();
+  });
 
-  // ---- 단축키: / = 검색창, 1~9 = 링크 열기, 검색창에서 Esc = 빠져나오기(그다음 숫자 키), 메모·추가 칸에서 Esc = 나가기 ----
+  // 검색 결과가 새 탭에서 열리면, 이 탭의 검색창은 비워서 다음 검색을 준비
+  search.form.addEventListener('submit', () => setTimeout(() => search.form.reset()));
+
+  // =====================================================================
+  // 12. 단축키: / = 검색창, 1~9 = 바로가기 열기, Esc = 지금 칸에서 빠져나오기
+  // =====================================================================
   document.addEventListener('keydown', () => document.documentElement.classList.add('used-keyboard'), { once: true });
   document.addEventListener('keydown', (event) => {
     // isComposing·229 = 한글 입력 중 (Safari는 229로만 알려 줌)
     if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.isComposing || event.keyCode === 229) return;
-    if (event.key === 'Escape' && event.target === search) {
-      event.preventDefault(); // 검색창이 쓰던 글을 지우지 않게
-      search.blur();
-      return;
+    if (event.key === 'Escape') {
+      if (event.target === search || event.target === memo) {
+        event.preventDefault(); // 검색창이 쓰던 글을 지우지 않게
+        event.target.blur();
+        return;
+      }
+      if (linkForm.contains(event.target)) return finishForm(editingIndex);
+      if (!back.hidden) return closeSettings();
     }
-    if (event.key === 'Escape' && event.target === memo) {
-      search.focus();
-      return;
-    }
-    if (event.key === 'Escape' && linkForm.contains(event.target)) {
-      finishForm(editingIndex);
-      return;
-    }
-    if (event.target instanceof Element && event.target.closest('input, textarea')) return;
+    if (event.target instanceof Element && event.target.closest('input, textarea, select')) return;
     if (event.key === '/') {
       event.preventDefault();
       search.focus();
       return;
     }
+    if (!back.hidden) return;
     const card = /^[1-9]$/.test(event.key) ? linksList.querySelectorAll('a.link-card')[Number(event.key) - 1] : null;
     if (card) card.click();
   });
